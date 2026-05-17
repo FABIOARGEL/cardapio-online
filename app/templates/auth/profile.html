@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Meu Perfil — Cardápio Online{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="flex flex-col md:flex-row gap-8">
+        <!-- Sidebar -->
+        <div class="w-full md:w-64 flex-shrink-0">
+            <div class="bg-white rounded-2xl p-4 sticky top-24 border border-gray-100 shadow-card">
+                <nav class="space-y-1">
+                    <a href="/perfil/" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 text-red-500 font-medium">
+                        <i data-lucide="user" class="w-5 h-5"></i> Dados Pessoais
+                    </a>
+                    <a href="/enderecos/" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors">
+                        <i data-lucide="map-pin" class="w-5 h-5"></i> Endereços
+                    </a>
+                    <a href="/meus-pedidos/" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors">
+                        <i data-lucide="receipt" class="w-5 h-5"></i> Pedidos
+                    </a>
+                    <hr class="border-gray-100 my-2">
+                    <button onclick="Auth.logout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 transition-colors">
+                        <i data-lucide="log-out" class="w-5 h-5"></i> Sair
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="flex-1 space-y-6">
+            <h1 class="text-2xl font-bold text-gray-800 mb-6">Dados Pessoais</h1>
+
+            <form id="profile-form" class="bg-white rounded-2xl p-6 fade-in border border-gray-100 shadow-card">
+                <h2 class="font-semibold text-gray-800 mb-4">Informações de Contato</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1.5">Nome Completo</label>
+                        <input type="text" id="profile-name" required class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 outline-none focus:bg-white transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1.5">Email</label>
+                        <input type="email" id="profile-email" disabled class="w-full px-4 py-3 rounded-xl bg-gray-100 border border-gray-200 text-gray-400 outline-none cursor-not-allowed">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1.5">Telefone (opcional)</label>
+                        <input type="text" id="profile-phone" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 outline-none focus:bg-white transition-colors" placeholder="(00) 00000-0000">
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end">
+                    <button type="submit" id="btn-save-profile" class="btn-primary px-6 py-2.5 rounded-xl text-white font-medium">Salvar Alterações</button>
+                </div>
+            </form>
+
+            <form id="password-form" class="bg-white rounded-2xl p-6 fade-in border border-gray-100 shadow-card">
+                <h2 class="font-semibold text-gray-800 mb-4">Alterar Senha</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1.5">Senha Atual</label>
+                        <input type="password" id="current-password" required class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 outline-none focus:bg-white transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1.5">Nova Senha</label>
+                        <input type="password" id="new-password" required minlength="8" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 outline-none focus:bg-white transition-colors">
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end">
+                    <button type="submit" id="btn-save-password" class="btn-primary px-6 py-2.5 rounded-xl text-white font-medium">Atualizar Senha</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.isAuthenticated()) { window.location.href = '/login/'; }
+
+    async function loadProfile() {
+        try {
+            const res = await API.get('/api/auth/me/');
+            if (res.ok) { const user = await res.json(); document.getElementById('profile-name').value = user.name || ''; document.getElementById('profile-email').value = user.email || ''; document.getElementById('profile-phone').value = user.phone || ''; }
+        } catch (e) { showToast('Erro ao carregar perfil', 'error'); }
+    }
+
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-save-profile');
+        btn.textContent = 'Salvando...'; btn.disabled = true;
+        try {
+            const res = await API.put('/api/auth/profile/', { name: document.getElementById('profile-name').value, phone: document.getElementById('profile-phone').value });
+            if (res.ok) { const updatedUser = await res.json(); Auth.setAuth({ user: updatedUser }); showToast('Perfil atualizado com sucesso!'); }
+            else { const data = await res.json(); showToast(data.error || 'Erro ao atualizar', 'error'); }
+        } catch (e) { showToast('Erro de conexão', 'error'); }
+        finally { btn.textContent = 'Salvar Alterações'; btn.disabled = false; }
+    });
+
+    document.getElementById('password-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-save-password');
+        btn.textContent = 'Atualizando...'; btn.disabled = true;
+        try {
+            const res = await API.put('/api/auth/password/', { current_password: document.getElementById('current-password').value, new_password: document.getElementById('new-password').value });
+            if (res.ok) { showToast('Senha atualizada com sucesso!'); document.getElementById('password-form').reset(); }
+            else { const data = await res.json(); showToast(data.error || 'Erro ao atualizar senha', 'error'); }
+        } catch (e) { showToast('Erro de conexão', 'error'); }
+        finally { btn.textContent = 'Atualizar Senha'; btn.disabled = false; }
+    });
+
+    loadProfile();
+</script>
+{% endblock %}

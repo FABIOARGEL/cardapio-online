@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Meus Endereços — Cardápio Online{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="flex flex-col md:flex-row gap-8">
+        <!-- Sidebar -->
+        <div class="w-full md:w-64 flex-shrink-0">
+            <div class="bg-white rounded-2xl p-4 sticky top-24 border border-gray-100 shadow-card">
+                <nav class="space-y-1">
+                    <a href="/perfil/" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors">
+                        <i data-lucide="user" class="w-5 h-5"></i> Dados Pessoais
+                    </a>
+                    <a href="/enderecos/" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 text-red-500 font-medium">
+                        <i data-lucide="map-pin" class="w-5 h-5"></i> Endereços
+                    </a>
+                    <a href="/meus-pedidos/" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors">
+                        <i data-lucide="receipt" class="w-5 h-5"></i> Pedidos
+                    </a>
+                    <hr class="border-gray-100 my-2">
+                    <button onclick="Auth.logout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 transition-colors">
+                        <i data-lucide="log-out" class="w-5 h-5"></i> Sair
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="flex-1 space-y-6">
+            <div class="flex items-center justify-between mb-6">
+                <h1 class="text-2xl font-bold text-gray-800">Endereços</h1>
+                <button onclick="openAddressModal()" class="btn-primary px-4 py-2 rounded-xl text-white text-sm font-semibold flex items-center gap-2">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Novo Endereço
+                </button>
+            </div>
+
+            <div id="addresses-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="skeleton rounded-2xl h-32"></div>
+                <div class="skeleton rounded-2xl h-32"></div>
+            </div>
+
+            <div id="addresses-empty" class="hidden text-center py-12 bg-white rounded-2xl border border-gray-100 shadow-card">
+                <i data-lucide="map-pin-off" class="w-12 h-12 text-gray-300 mx-auto mb-3"></i>
+                <p class="text-gray-500">Nenhum endereço cadastrado.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Address Modal -->
+<div id="address-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeAddressModal()"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white border border-gray-200 rounded-2xl shadow-2xl p-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-6 flex justify-between items-center">
+            Novo Endereço
+            <button onclick="closeAddressModal()" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </h2>
+        <form id="address-form" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-600 mb-1">CEP</label>
+                    <input type="text" id="addr-cep" required class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 outline-none focus:bg-white">
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Rua/Avenida</label>
+                    <input type="text" id="addr-street" required class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 outline-none focus:bg-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Número</label>
+                    <input type="text" id="addr-number" required class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 outline-none focus:bg-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Complemento</label>
+                    <input type="text" id="addr-complement" class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 outline-none focus:bg-white">
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Bairro</label>
+                    <input type="text" id="addr-neighborhood" required class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 outline-none focus:bg-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Cidade</label>
+                    <input type="text" id="addr-city" required class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 outline-none focus:bg-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Estado (UF)</label>
+                    <input type="text" id="addr-state" required maxlength="2" class="w-full px-4 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 outline-none focus:bg-white uppercase">
+                </div>
+                <div class="col-span-2 mt-2">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="addr-default" class="w-4 h-4 rounded text-red-500 bg-white border-gray-300 focus:ring-red-500">
+                        <span class="text-sm text-gray-700">Definir como endereço principal</span>
+                    </label>
+                </div>
+            </div>
+            <div class="mt-6 flex gap-3">
+                <button type="button" onclick="closeAddressModal()" class="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">Cancelar</button>
+                <button type="submit" id="btn-save-addr" class="flex-1 btn-primary px-4 py-2.5 rounded-xl text-white font-medium">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.isAuthenticated()) { window.location.href = '/login/'; }
+
+    async function loadAddresses() {
+        try { const res = await API.get('/api/auth/addresses/'); if (res.ok) { const addresses = await res.json(); renderAddresses(addresses); } }
+        catch (e) { showToast('Erro ao carregar endereços', 'error'); }
+    }
+
+    function renderAddresses(addresses) {
+        const list = document.getElementById('addresses-list');
+        const empty = document.getElementById('addresses-empty');
+        if (addresses.length === 0) { list.innerHTML = ''; empty.classList.remove('hidden'); return; }
+        empty.classList.add('hidden');
+        list.innerHTML = addresses.map((addr, idx) => `
+            <div class="bg-white rounded-2xl p-5 relative group fade-in border shadow-card ${addr.is_default ? 'border-red-200 bg-red-50/20' : 'border-gray-100'}">
+                ${addr.is_default ? '<span class="absolute top-4 right-4 px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-500 rounded-md">Principal</span>' : ''}
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="home" class="w-5 h-5 text-gray-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-medium text-gray-800 mb-1">${addr.label || 'Endereço'}</h3>
+                        <p class="text-sm text-gray-500 leading-relaxed">
+                            ${addr.street}, ${addr.number} ${addr.complement ? ' - ' + addr.complement : ''}<br>
+                            ${addr.neighborhood}<br>
+                            ${addr.city} - ${addr.state}, ${addr.zip_code}
+                        </p>
+                    </div>
+                </div>
+                <div class="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onclick="deleteAddress(${idx})" class="p-2 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 transition-colors" title="Excluir">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+        lucide.createIcons();
+    }
+
+    function openAddressModal() { document.getElementById('address-modal').classList.remove('hidden'); document.getElementById('address-form').reset(); }
+    function closeAddressModal() { document.getElementById('address-modal').classList.add('hidden'); }
+
+    document.getElementById('address-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-save-addr');
+        btn.textContent = 'Salvando...'; btn.disabled = true;
+        const data = { zip_code: document.getElementById('addr-cep').value, street: document.getElementById('addr-street').value, number: document.getElementById('addr-number').value, complement: document.getElementById('addr-complement').value, neighborhood: document.getElementById('addr-neighborhood').value, city: document.getElementById('addr-city').value, state: document.getElementById('addr-state').value.toUpperCase(), is_default: document.getElementById('addr-default').checked };
+        try {
+            const res = await API.post('/api/auth/addresses/', data);
+            if (res.ok) { showToast('Endereço adicionado com sucesso!'); closeAddressModal(); loadAddresses(); }
+            else { const err = await res.json(); showToast(err.error || 'Erro ao adicionar', 'error'); }
+        } catch (e) { showToast('Erro de conexão', 'error'); }
+        finally { btn.textContent = 'Salvar'; btn.disabled = false; }
+    });
+
+    async function deleteAddress(index) {
+        if (!confirm('Tem certeza que deseja excluir este endereço?')) return;
+        try { const res = await API.delete(`/api/auth/addresses/${index}/`); if (res.ok) { showToast('Endereço removido!'); loadAddresses(); } }
+        catch (e) { showToast('Erro ao remover', 'error'); }
+    }
+
+    loadAddresses();
+    
+    CEPHelper.init('addr-cep', {
+        street: 'addr-street',
+        neighborhood: 'addr-neighborhood',
+        city: 'addr-city',
+        state: 'addr-state',
+        complement: 'addr-complement',
+        number: 'addr-number'
+    });
+</script>
+{% endblock %}

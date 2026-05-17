@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}Entrar — Cardápio Online{% endblock %}
+
+{% block extra_css %}
+<style>
+    .google-btn-custom {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        background: #fff;
+        color: #374151;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        min-height: 48px;
+    }
+    .google-btn-custom:hover {
+        background: #f9fafb;
+        border-color: #d1d5db;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    }
+    .google-btn-custom:active { transform: translateY(0); }
+    .google-btn-custom svg { flex-shrink: 0; }
+    .google-btn-custom:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+    #google-btn-gsi { display: flex; justify-content: center; }
+    #google-btn-gsi > div { width: 100% !important; }
+    .divider-bg { background: #ffffff; }
+    .spinner { animation: spin 0.8s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .auth-pattern {
+        background-image: radial-gradient(circle at 0% 0%, rgba(229,57,53,0.04) 0%, transparent 50%),
+                          radial-gradient(circle at 100% 100%, rgba(229,57,53,0.03) 0%, transparent 50%);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-[80vh] flex items-center justify-center px-4 py-12 auth-pattern">
+    <div class="bg-white rounded-3xl p-8 w-full max-w-md fade-in shadow-card border border-gray-100">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-red-500/20">
+                <i data-lucide="utensils" class="w-7 h-7 text-white"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800">Entrar</h1>
+            <p class="text-gray-500 text-sm mt-1">Acesse sua conta para fazer pedidos</p>
+        </div>
+
+        <!-- Google Sign-In -->
+        <div class="mb-4">
+            <div id="google-btn-gsi" class="w-full"></div>
+            <button id="google-btn-fallback" type="button" class="google-btn-custom" onclick="startGoogleLogin()">
+                <svg width="20" height="20" viewBox="0 0 48 48">
+                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                    <path fill="none" d="M0 0h48v48H0z"/>
+                </svg>
+                <span id="google-btn-text">Entrar com Google</span>
+            </button>
+        </div>
+
+        <!-- Divider -->
+        <div class="relative my-6">
+            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div>
+            <div class="relative flex justify-center text-xs"><span class="px-3 divider-bg text-gray-400">ou entre com email</span></div>
+        </div>
+
+        <!-- Email/Password Form -->
+        <form id="login-form" class="space-y-4">
+            <div>
+                <label for="login-email" class="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+                <input type="email" id="login-email" required placeholder="seu@email.com"
+                    class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 placeholder-gray-400 outline-none focus:bg-white transition-all text-sm">
+            </div>
+            <div>
+                <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1.5">Senha</label>
+                <input type="password" id="login-password" required placeholder="••••••••"
+                    class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 placeholder-gray-400 outline-none focus:bg-white transition-all text-sm">
+            </div>
+            <div id="login-error" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3"></div>
+            <button type="submit" id="login-btn" class="w-full btn-primary py-3.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2">
+                <span>Entrar</span>
+            </button>
+        </form>
+
+        <p class="text-center text-sm text-gray-500 mt-6">
+            Não tem conta? <a href="/cadastro/" class="text-red-500 hover:text-red-600 font-semibold transition-colors">Cadastre-se</a>
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const GOOGLE_CLIENT_ID = '{{ GOOGLE_CLIENT_ID }}';
+    let googleInitialized = false;
+
+    function handleGoogleCredentialResponse(response) {
+        const errorDiv = document.getElementById('login-error');
+        const fallbackBtn = document.getElementById('google-btn-fallback');
+        errorDiv.classList.add('hidden');
+
+        if (fallbackBtn && !fallbackBtn.classList.contains('hidden')) {
+            fallbackBtn.disabled = true;
+            document.getElementById('google-btn-text').textContent = 'Autenticando...';
+        }
+
+        fetch('/api/auth/google/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credential: response.credential }),
+        })
+        .then(res => res.json().then(data => ({ ok: res.ok, data })))
+        .then(({ ok, data }) => {
+            if (ok && data.access_token) {
+                Auth.setAuth(data);
+                showToast('Login realizado com sucesso!');
+                setTimeout(() => {
+                    window.location.href = data.user.role === 'owner' ? '/dashboard/' : '/';
+                }, 500);
+            } else {
+                errorDiv.textContent = data.error || 'Erro ao fazer login com Google.';
+                errorDiv.classList.remove('hidden');
+                resetGoogleButton();
+            }
+        })
+        .catch(() => {
+            errorDiv.textContent = 'Erro de conexão. Tente novamente.';
+            errorDiv.classList.remove('hidden');
+            resetGoogleButton();
+        });
+    }
+
+    function resetGoogleButton() {
+        const fallbackBtn = document.getElementById('google-btn-fallback');
+        if (fallbackBtn) {
+            fallbackBtn.disabled = false;
+            document.getElementById('google-btn-text').textContent = 'Entrar com Google';
+        }
+    }
+
+    function initializeGoogleSignIn() {
+        if (!GOOGLE_CLIENT_ID || googleInitialized) return;
+        try {
+            google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: handleGoogleCredentialResponse,
+                auto_select: false,
+                cancel_on_tap_outside: true,
+            });
+            const gsiContainer = document.getElementById('google-btn-gsi');
+            google.accounts.id.renderButton(gsiContainer, {
+                theme: 'outline',
+                size: 'large',
+                text: 'continue_with',
+                shape: 'pill',
+                width: gsiContainer.offsetWidth || 380,
+                locale: 'pt-BR',
+            });
+            const fallbackBtn = document.getElementById('google-btn-fallback');
+            if (fallbackBtn) fallbackBtn.classList.add('hidden');
+            googleInitialized = true;
+        } catch (err) {
+            console.warn('Google Identity Services não carregou, usando botão alternativo.', err);
+        }
+    }
+
+    function startGoogleLogin() {
+        if (typeof google !== 'undefined' && google.accounts) {
+            if (!googleInitialized) initializeGoogleSignIn();
+            google.accounts.id.prompt();
+        } else {
+            const errorDiv = document.getElementById('login-error');
+            errorDiv.textContent = 'Google Sign-In não está disponível. Verifique sua conexão ou tente novamente.';
+            errorDiv.classList.remove('hidden');
+        }
+    }
+
+    function waitForGoogle() {
+        if (typeof google !== 'undefined' && google.accounts) {
+            initializeGoogleSignIn();
+        } else {
+            let attempts = 0;
+            const interval = setInterval(() => {
+                attempts++;
+                if (typeof google !== 'undefined' && google.accounts) {
+                    clearInterval(interval);
+                    initializeGoogleSignIn();
+                } else if (attempts > 25) {
+                    clearInterval(interval);
+                    console.warn('Google Identity Services timeout — fallback button active.');
+                }
+            }, 200);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', waitForGoogle);
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('login-btn');
+        const btnText = btn.querySelector('span');
+        const errorDiv = document.getElementById('login-error');
+        const originalText = btnText.textContent;
+
+        btnText.textContent = 'Entrando...';
+        btn.disabled = true;
+        errorDiv.classList.add('hidden');
+
+        try {
+            const res = await fetch('/api/auth/login/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: document.getElementById('login-email').value,
+                    password: document.getElementById('login-password').value,
+                }),
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                Auth.setAuth(data);
+                showToast('Login realizado com sucesso!');
+                setTimeout(() => {
+                    window.location.href = data.user.role === 'owner' ? '/dashboard/' : '/';
+                }, 500);
+            } else {
+                let msg = data.error || '';
+                if (!msg) {
+                    const messages = [];
+                    for (const [key, val] of Object.entries(data)) {
+                        if (Array.isArray(val)) messages.push(...val);
+                        else if (typeof val === 'string') messages.push(val);
+                    }
+                    msg = messages.join(' ') || 'Erro ao fazer login.';
+                }
+                errorDiv.textContent = msg;
+                errorDiv.classList.remove('hidden');
+            }
+        } catch {
+            errorDiv.textContent = 'Erro de conexão. Tente novamente.';
+            errorDiv.classList.remove('hidden');
+        }
+
+        btnText.textContent = originalText;
+        btn.disabled = false;
+    });
+</script>
+{% endblock %}
