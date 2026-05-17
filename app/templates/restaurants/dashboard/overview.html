@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Cardápio Online{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kpi-card { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); background: #fff; border: 1px solid #f0f0f0; }
+    .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
+    .chart-bar { transition: height 0.8s cubic-bezier(0.4,0,0.2,1); }
+    .counter { transition: all 0.5s ease-out; }
+    .main-with-sidebar { padding-bottom: 5rem; }
+    @media (min-width: 1024px) { .main-with-sidebar { padding-bottom: 0; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex min-h-[calc(100vh-4rem)]">
+    {% include "restaurants/dashboard/_sidebar.html" %}
+
+    <div class="flex-1 main-with-sidebar bg-gray-50/50">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">Visão Geral</h1>
+                    <p class="text-sm text-gray-500" id="overview-date"></p>
+                </div>
+                <button onclick="loadDashboard()" class="p-2.5 rounded-xl hover:bg-white border border-gray-200 transition-colors shadow-sm" title="Atualizar">
+                    <i data-lucide="refresh-cw" class="w-5 h-5 text-gray-500" id="refresh-icon"></i>
+                </button>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div class="kpi-card rounded-2xl p-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center"><i data-lucide="dollar-sign" class="w-4 h-4 text-emerald-600"></i></div>
+                        <span class="text-xs text-gray-400 font-medium">Hoje</span>
+                    </div>
+                    <p class="text-xl font-bold text-gray-800" id="kpi-today-revenue">R$ 0,00</p>
+                    <p class="text-xs text-gray-400"><span id="kpi-today-orders">0</span> pedidos</p>
+                </div>
+                <div class="kpi-card rounded-2xl p-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center"><i data-lucide="trending-up" class="w-4 h-4 text-blue-600"></i></div>
+                        <span class="text-xs text-gray-400 font-medium">Semana</span>
+                    </div>
+                    <p class="text-xl font-bold text-gray-800" id="kpi-week-revenue">R$ 0,00</p>
+                    <p class="text-xs text-gray-400"><span id="kpi-week-orders">0</span> pedidos</p>
+                </div>
+                <div class="kpi-card rounded-2xl p-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center"><i data-lucide="calendar" class="w-4 h-4 text-violet-600"></i></div>
+                        <span class="text-xs text-gray-400 font-medium">Mês</span>
+                    </div>
+                    <p class="text-xl font-bold text-gray-800" id="kpi-month-revenue">R$ 0,00</p>
+                    <p class="text-xs text-gray-400"><span id="kpi-month-orders">0</span> pedidos</p>
+                </div>
+                <div class="kpi-card rounded-2xl p-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center"><i data-lucide="receipt" class="w-4 h-4 text-red-600"></i></div>
+                        <span class="text-xs text-gray-400 font-medium">Ticket Médio</span>
+                    </div>
+                    <p class="text-xl font-bold text-gray-800" id="kpi-ticket">R$ 0,00</p>
+                    <p class="text-xs text-gray-400"><span id="kpi-products">0</span> produtos ativos</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <!-- Revenue Chart -->
+                <div class="lg:col-span-2 bg-white rounded-2xl p-5 border border-gray-100 shadow-card">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-4">Faturamento — Últimos 7 dias</h3>
+                    <div class="flex items-end gap-2 h-44" id="chart-container">
+                        <div class="flex-1 flex items-end justify-center"><div class="skeleton w-full h-8 rounded-t-lg"></div></div>
+                        <div class="flex-1 flex items-end justify-center"><div class="skeleton w-full h-12 rounded-t-lg"></div></div>
+                        <div class="flex-1 flex items-end justify-center"><div class="skeleton w-full h-6 rounded-t-lg"></div></div>
+                        <div class="flex-1 flex items-end justify-center"><div class="skeleton w-full h-16 rounded-t-lg"></div></div>
+                        <div class="flex-1 flex items-end justify-center"><div class="skeleton w-full h-10 rounded-t-lg"></div></div>
+                        <div class="flex-1 flex items-end justify-center"><div class="skeleton w-full h-14 rounded-t-lg"></div></div>
+                        <div class="flex-1 flex items-end justify-center"><div class="skeleton w-full h-4 rounded-t-lg"></div></div>
+                    </div>
+                </div>
+
+                <!-- Top Products -->
+                <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-card">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-4">Mais Vendidos</h3>
+                    <div id="top-products" class="space-y-3">
+                        <div class="skeleton h-6 rounded-lg"></div>
+                        <div class="skeleton h-6 rounded-lg"></div>
+                        <div class="skeleton h-6 rounded-lg"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Recent Orders -->
+                <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-semibold text-gray-700">Pedidos Recentes</h3>
+                        <a href="/dashboard/pedidos/" class="text-xs text-red-500 hover:text-red-600 font-medium transition-colors">Ver todos →</a>
+                    </div>
+                    <div id="recent-orders" class="space-y-3">
+                        <div class="skeleton h-16 rounded-xl"></div>
+                        <div class="skeleton h-16 rounded-xl"></div>
+                        <div class="skeleton h-16 rounded-xl"></div>
+                    </div>
+                </div>
+
+                <!-- Order Status Breakdown -->
+                <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-card">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-4">Status dos Pedidos</h3>
+                    <div id="status-breakdown" class="space-y-3">
+                        <div class="skeleton h-6 rounded-lg"></div>
+                        <div class="skeleton h-6 rounded-lg"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const SL = {pending:'Pendente',confirmed:'Confirmado',preparing:'Preparando',ready:'Pronto',delivered:'Entregue',cancelled:'Cancelado'};
+    const SC = {pending:'bg-amber-100 text-amber-700',confirmed:'bg-blue-100 text-blue-700',preparing:'bg-violet-100 text-violet-700',ready:'bg-emerald-100 text-emerald-700',delivered:'bg-emerald-100 text-emerald-700',cancelled:'bg-red-100 text-red-700'};
+
+
+
+    document.getElementById('overview-date').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    async function loadDashboard() {
+        const rid = DashboardNav.getRestaurantId();
+        if (!rid) return;
+
+        const icon = document.getElementById('refresh-icon');
+        icon.classList.add('animate-spin');
+
+        try {
+            const res = await API.get(`/api/restaurants/${rid}/stats/`);
+            const s = await res.json();
+
+            // KPIs
+            document.getElementById('kpi-today-revenue').textContent = formatMoney(s.today.revenue);
+            document.getElementById('kpi-today-orders').textContent = s.today.orders;
+            document.getElementById('kpi-week-revenue').textContent = formatMoney(s.week.revenue);
+            document.getElementById('kpi-week-orders').textContent = s.week.orders;
+            document.getElementById('kpi-month-revenue').textContent = formatMoney(s.month.revenue);
+            document.getElementById('kpi-month-orders').textContent = s.month.orders;
+            document.getElementById('kpi-ticket').textContent = formatMoney(s.ticket_average);
+            document.getElementById('kpi-products').textContent = s.available_products;
+
+            // Chart
+            const maxRev = Math.max(...s.daily_revenue.map(d => d.revenue), 1);
+            document.getElementById('chart-container').innerHTML = s.daily_revenue.map(d => {
+                const h = Math.max((d.revenue / maxRev) * 160, 4);
+                return `<div class="flex-1 flex flex-col items-center gap-1">
+                    <span class="text-[10px] text-gray-400">${d.revenue > 0 ? formatMoney(d.revenue) : ''}</span>
+                    <div class="w-full bg-gradient-to-t from-red-500 to-red-400 rounded-t-lg chart-bar cursor-pointer group relative" style="height:${h}px" title="${d.orders} pedidos">
+                        <div class="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-800 text-xs text-white px-2 py-1 rounded-lg shadow-lg whitespace-nowrap">${d.orders} pedidos</div>
+                    </div>
+                    <span class="text-[10px] text-gray-400">${d.day_name}</span>
+                </div>`;
+            }).join('');
+
+            // Top Products
+            const topEl = document.getElementById('top-products');
+            if (s.top_products.length) {
+                topEl.innerHTML = s.top_products.map((p, i) => `
+                    <div class="flex items-center gap-3">
+                        <span class="w-6 h-6 rounded-lg bg-red-50 flex items-center justify-center text-xs font-bold text-red-500">${i+1}</span>
+                        <span class="text-sm text-gray-700 flex-1 truncate">${p.name}</span>
+                        <span class="text-xs text-gray-400">${p.quantity}x</span>
+                    </div>
+                `).join('');
+            } else {
+                topEl.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">Sem dados ainda</p>';
+            }
+
+            // Recent Orders
+            const recentEl = document.getElementById('recent-orders');
+            if (s.recent_orders.length) {
+                recentEl.innerHTML = s.recent_orders.map(o => `
+                    <div class="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                        <div>
+                            <span class="text-sm font-medium text-red-500">${o.order_number}</span>
+                            <p class="text-xs text-gray-400">${o.items.length} ite${o.items.length > 1 ? 'ns' : 'm'} · ${new Date(o.created_at).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-medium text-gray-800">${formatMoney(o.total)}</span>
+                            <span class="px-2 py-0.5 rounded-lg text-[10px] font-medium ${SC[o.status]}">${SL[o.status]}</span>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                recentEl.innerHTML = '<p class="text-sm text-gray-400 text-center py-6">Nenhum pedido ainda</p>';
+            }
+
+            // Status Breakdown
+            const statusEl = document.getElementById('status-breakdown');
+            const statuses = ['pending','confirmed','preparing','ready','delivered','cancelled'];
+            const total = Object.values(s.status_counts).reduce((a,b)=>a+b, 0) || 1;
+            statusEl.innerHTML = statuses.map(st => {
+                const count = s.status_counts[st] || 0;
+                const pct = Math.round((count / total) * 100);
+                return `<div class="flex items-center gap-3">
+                    <span class="text-xs w-20 text-gray-500">${SL[st]}</span>
+                    <div class="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full ${st==='cancelled' ? 'bg-red-500' : st==='delivered' ? 'bg-emerald-500' : 'bg-red-400'}" style="width:${pct}%; transition: width 0.8s ease"></div>
+                    </div>
+                    <span class="text-xs text-gray-400 w-8 text-right">${count}</span>
+                </div>`;
+            }).join('');
+
+        } catch (e) {
+            console.error('Error loading dashboard:', e);
+        }
+
+        icon.classList.remove('animate-spin');
+    }
+
+    document.addEventListener('restaurant-loaded', () => loadDashboard());
+    document.addEventListener('restaurant-changed', () => loadDashboard());
+    document.addEventListener('no-restaurants', () => {
+        window.location.href = '/dashboard/configuracoes/';
+    });
+    DashboardNav.init();
+</script>
+{% endblock %}

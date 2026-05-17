@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block title %}Cupons — Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .main-with-sidebar { padding-bottom: 5rem; }
+    @media (min-width: 1024px) { .main-with-sidebar { padding-bottom: 0; } }
+    .coupon-card { transition: all 0.3s ease; }
+    .coupon-card:hover { transform: translateY(-1px); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex min-h-[calc(100vh-4rem)]">
+    {% include "restaurants/dashboard/_sidebar.html" %}
+
+    <div class="flex-1 main-with-sidebar">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 py-6">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">Cupons & Promoções</h1>
+                    <p class="text-sm text-gray-500">Gerencie cupons de desconto</p>
+                </div>
+                <button onclick="openCouponModal()" class="btn-primary px-5 py-2.5 rounded-xl text-sm font-medium text-white flex items-center gap-2">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Novo Cupom
+                </button>
+            </div>
+
+            <div id="coupons-list" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+
+            <div id="coupons-empty" class="hidden text-center py-16 bg-white border border-gray-100 shadow-card rounded-2xl">
+                <i data-lucide="ticket" class="w-12 h-12 text-gray-400 mx-auto mb-3"></i>
+                <h3 class="text-lg font-semibold text-gray-600 mb-2">Nenhum cupom ativo</h3>
+                <p class="text-gray-400 mb-4">Crie cupons para atrair mais clientes.</p>
+                <button onclick="openCouponModal()" class="btn-primary px-6 py-3 rounded-xl text-sm text-white font-medium">Criar Primeiro Cupom</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Coupon Modal -->
+<div id="coupon-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-white border border-gray-100 shadow-card rounded-2xl p-6 w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-gray-800" id="coupon-modal-title">Novo Cupom</h2>
+            <button onclick="closeCouponModal()" class="p-2 rounded-lg hover:bg-gray-200 transition-colors"><i data-lucide="x" class="w-5 h-5 text-gray-500"></i></button>
+        </div>
+        <form id="coupon-form" class="space-y-4">
+            <input type="hidden" id="cf-id" value="">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1 font-medium">Código do Cupom *</label>
+                <input type="text" id="cf-code" required placeholder="Ex: PROMO10" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400 uppercase">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1 font-medium">Descrição</label>
+                <input type="text" id="cf-desc" placeholder="Ex: 10% de desconto no primeiro pedido" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1 font-medium">Tipo *</label>
+                    <select id="cf-type" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400">
+                        <option value="percentage">Porcentagem (%)</option>
+                        <option value="fixed">Valor fixo (R$)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1 font-medium">Valor do Desconto *</label>
+                    <input type="number" id="cf-value" step="0.01" min="0.01" required class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1 font-medium">Pedido Mínimo (R$)</label>
+                    <input type="number" id="cf-min" step="0.01" min="0" value="0" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1 font-medium">Máx. de Usos</label>
+                    <input type="number" id="cf-max" min="0" value="0" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400">
+                    <p class="text-xs text-gray-400 mt-1">0 = ilimitado</p>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1 font-medium">Válido até</label>
+                <input type="datetime-local" id="cf-until" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400">
+            </div>
+            <div id="cf-error" class="hidden text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3"></div>
+            <button type="submit" id="cf-btn" class="w-full btn-primary py-3 rounded-xl text-white font-semibold text-sm">Salvar Cupom</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+
+
+    async function loadCoupons() {
+        const rid = DashboardNav.getRestaurantId();
+        if (!rid) return;
+        try {
+            const res = await API.get(`/api/restaurants/${rid}/coupons/`);
+            const coupons = await res.json();
+            const list = document.getElementById('coupons-list');
+            const empty = document.getElementById('coupons-empty');
+
+            if (!coupons.length) {
+                list.innerHTML = '';
+                empty.classList.remove('hidden');
+                lucide.createIcons();
+                return;
+            }
+            empty.classList.add('hidden');
+
+            list.innerHTML = coupons.map(c => {
+                const isExpired = c.valid_until && new Date(c.valid_until) < new Date();
+                const statusClass = !c.is_active ? 'border-gray-200/30 opacity-60' : isExpired ? 'border-red-500/20' : 'border-emerald-500/20';
+                const statusBadge = !c.is_active ? '<span class="px-2 py-0.5 rounded-lg text-[10px] bg-gray-200 text-gray-500">Inativo</span>'
+                    : isExpired ? '<span class="px-2 py-0.5 rounded-lg text-[10px] bg-red-500/20 text-red-400">Expirado</span>'
+                    : '<span class="px-2 py-0.5 rounded-lg text-[10px] bg-emerald-500/20 text-emerald-400">Ativo</span>';
+
+                return `
+                    <div class="coupon-card bg-white border border-gray-100 shadow-card rounded-2xl p-5 border ${statusClass}">
+                        <div class="flex items-start justify-between mb-3">
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-lg font-bold text-red-500 font-mono">${c.code}</span>
+                                    ${statusBadge}
+                                </div>
+                                <p class="text-xs text-gray-400">${c.description || 'Sem descrição'}</p>
+                            </div>
+                            <div class="flex gap-1">
+                                <button onclick='editCoupon(${JSON.stringify(c)})' class="p-1.5 rounded-lg hover:bg-gray-200 transition-colors"><i data-lucide="pencil" class="w-4 h-4 text-gray-500"></i></button>
+                                <button onclick="deleteCoupon('${c.id}')" class="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"><i data-lucide="trash-2" class="w-4 h-4 text-red-400"></i></button>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 text-sm">
+                            <div class="flex items-center gap-1">
+                                <i data-lucide="${c.discount_type === 'percentage' ? 'percent' : 'dollar-sign'}" class="w-3.5 h-3.5 text-gray-400"></i>
+                                <span class="text-gray-600 font-medium">${c.discount_type === 'percentage' ? c.discount_value + '%' : formatMoney(c.discount_value)}</span>
+                            </div>
+                            ${c.min_order > 0 ? `<span class="text-xs text-gray-400">Min: ${formatMoney(c.min_order)}</span>` : ''}
+                            ${c.max_uses > 0 ? `<span class="text-xs text-gray-400">${c.used_count}/${c.max_uses} usos</span>` : '<span class="text-xs text-gray-400">Uso ilimitado</span>'}
+                        </div>
+                        ${c.valid_until ? `<p class="text-xs text-gray-400 mt-2">Até: ${new Date(c.valid_until).toLocaleDateString('pt-BR')}</p>` : ''}
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        } catch { showToast('Erro ao carregar cupons', 'error'); }
+    }
+
+    function openCouponModal(coupon = null) {
+        document.getElementById('coupon-modal-title').textContent = coupon ? 'Editar Cupom' : 'Novo Cupom';
+        document.getElementById('cf-id').value = coupon ? coupon.id : '';
+        document.getElementById('cf-code').value = coupon ? coupon.code : '';
+        document.getElementById('cf-code').disabled = !!coupon;
+        document.getElementById('cf-desc').value = coupon ? (coupon.description || '') : '';
+        document.getElementById('cf-type').value = coupon ? coupon.discount_type : 'percentage';
+        document.getElementById('cf-value').value = coupon ? coupon.discount_value : '';
+        document.getElementById('cf-min').value = coupon ? coupon.min_order : 0;
+        document.getElementById('cf-max').value = coupon ? coupon.max_uses : 0;
+        document.getElementById('cf-until').value = coupon && coupon.valid_until ? coupon.valid_until.slice(0, 16) : '';
+        document.getElementById('cf-error').classList.add('hidden');
+        document.getElementById('coupon-modal').classList.remove('hidden');
+        document.getElementById('coupon-modal').classList.add('flex');
+    }
+
+    function closeCouponModal() {
+        document.getElementById('coupon-modal').classList.add('hidden');
+        document.getElementById('coupon-modal').classList.remove('flex');
+    }
+
+    function editCoupon(c) { openCouponModal(c); }
+
+    async function deleteCoupon(cid) {
+        if (!confirm('Remover este cupom?')) return;
+        const rid = DashboardNav.getRestaurantId();
+        try {
+            await API.delete(`/api/restaurants/${rid}/coupons/${cid}/`);
+            showToast('Cupom removido');
+            loadCoupons();
+        } catch { showToast('Erro', 'error'); }
+    }
+
+    document.getElementById('coupon-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const rid = DashboardNav.getRestaurantId();
+        const cid = document.getElementById('cf-id').value;
+        const btn = document.getElementById('cf-btn');
+        const errDiv = document.getElementById('cf-error');
+        btn.disabled = true; btn.textContent = 'Salvando...'; errDiv.classList.add('hidden');
+
+        const data = {
+            description: document.getElementById('cf-desc').value,
+            discount_type: document.getElementById('cf-type').value,
+            discount_value: parseFloat(document.getElementById('cf-value').value),
+            min_order: parseFloat(document.getElementById('cf-min').value) || 0,
+            max_uses: parseInt(document.getElementById('cf-max').value) || 0,
+            valid_until: document.getElementById('cf-until').value || null,
+        };
+        if (!cid) data.code = document.getElementById('cf-code').value;
+
+        try {
+            let res;
+            if (cid) {
+                res = await API.put(`/api/restaurants/${rid}/coupons/${cid}/`, data);
+            } else {
+                res = await API.post(`/api/restaurants/${rid}/coupons/`, data);
+            }
+            const result = await res.json();
+            if (res.ok) {
+                showToast(cid ? 'Cupom atualizado!' : 'Cupom criado!');
+                closeCouponModal();
+                loadCoupons();
+            } else {
+                errDiv.textContent = result.error || 'Erro ao salvar.';
+                errDiv.classList.remove('hidden');
+            }
+        } catch {
+            errDiv.textContent = 'Erro de conexão.';
+            errDiv.classList.remove('hidden');
+        }
+        btn.disabled = false; btn.textContent = 'Salvar Cupom';
+    });
+
+    document.addEventListener('restaurant-loaded', () => loadCoupons());
+    document.addEventListener('restaurant-changed', () => loadCoupons());
+    DashboardNav.init();
+</script>
+{% endblock %}

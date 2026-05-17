@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+{% block title %}Produtos — Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-row { transition: all 0.2s ease; }
+    .product-row:hover { background: rgba(255,255,255,0.03); }
+    .toggle-switch { position:relative; width:44px; height:24px; }
+    .toggle-switch input { opacity:0; width:0; height:0; }
+    .toggle-slider { position:absolute; cursor:pointer; inset:0; background:#334155; border-radius:12px; transition:0.3s; }
+    .toggle-slider:before { position:absolute; content:""; height:18px; width:18px; left:3px; bottom:3px; background:white; border-radius:50%; transition:0.3s; }
+    .toggle-switch input:checked+.toggle-slider { background:#f97316; }
+    .toggle-switch input:checked+.toggle-slider:before { transform:translateX(20px); }
+    .main-with-sidebar { padding-bottom: 5rem; }
+    @media (min-width: 1024px) { .main-with-sidebar { padding-bottom: 0; } }
+    .img-preview { max-height: 120px; object-fit: cover; border-radius: 12px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex min-h-[calc(100vh-4rem)]">
+    {% include "restaurants/dashboard/_sidebar.html" %}
+
+    <div class="flex-1 main-with-sidebar">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">Produtos</h1>
+                    <p class="text-sm text-gray-500">Gerencie seu cardápio</p>
+                </div>
+                <button onclick="openProductModal()" class="btn-primary px-5 py-2.5 rounded-xl text-sm font-medium text-white flex items-center gap-2">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Novo Produto
+                </button>
+            </div>
+
+            <!-- Category Filter -->
+            <div class="flex gap-2 mb-6 overflow-x-auto">
+                <button onclick="filterCategory(null)" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-red-100 text-red-500 border border-red-200">Todos</button>
+                <button onclick="filterCategory('main')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100/50 text-gray-500 border border-gray-200/50">Pratos</button>
+                <button onclick="filterCategory('appetizer')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100/50 text-gray-500 border border-gray-200/50">Entradas</button>
+                <button onclick="filterCategory('dessert')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100/50 text-gray-500 border border-gray-200/50">Sobremesas</button>
+                <button onclick="filterCategory('drink')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100/50 text-gray-500 border border-gray-200/50">Bebidas</button>
+                <button onclick="filterCategory('combo')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100/50 text-gray-500 border border-gray-200/50">Combos</button>
+            </div>
+
+            <!-- Products Table -->
+            <div class="bg-white border border-gray-100 shadow-card rounded-2xl overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200/50">
+                                <th class="text-left px-5 py-3 text-xs text-gray-400 font-medium uppercase tracking-wider">Produto</th>
+                                <th class="text-left px-5 py-3 text-xs text-gray-400 font-medium uppercase tracking-wider hidden md:table-cell">Categoria</th>
+                                <th class="text-left px-5 py-3 text-xs text-gray-400 font-medium uppercase tracking-wider">Preço</th>
+                                <th class="text-left px-5 py-3 text-xs text-gray-400 font-medium uppercase tracking-wider hidden sm:table-cell">Estoque</th>
+                                <th class="text-center px-5 py-3 text-xs text-gray-400 font-medium uppercase tracking-wider">Disponível</th>
+                                <th class="text-center px-5 py-3 text-xs text-gray-400 font-medium uppercase tracking-wider">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="products-empty" class="hidden text-center py-16 bg-white border border-gray-100 shadow-card rounded-2xl mt-4">
+                <i data-lucide="package" class="w-12 h-12 text-gray-400 mx-auto mb-3"></i>
+                <p class="text-gray-500 mb-4">Nenhum produto cadastrado.</p>
+                <button onclick="openProductModal()" class="btn-primary px-6 py-3 rounded-xl text-sm text-white font-medium">Adicionar Produto</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Product Modal -->
+<div id="product-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-white border border-gray-100 shadow-card rounded-2xl p-6 w-full max-w-lg mx-4 max-h-[85vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-gray-800" id="product-modal-title">Novo Produto</h2>
+            <button onclick="closeProductModal()" class="p-2 rounded-lg hover:bg-gray-200 transition-colors"><i data-lucide="x" class="w-5 h-5 text-gray-500"></i></button>
+        </div>
+        <form id="product-form" class="space-y-4">
+            <input type="hidden" id="pf-id" value="">
+            <div>
+                <label class="block text-sm font-medium text-gray-600 mb-1">Nome *</label>
+                <input type="text" id="pf-name" required class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400 transition-colors">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-600 mb-1">Descrição</label>
+                <textarea id="pf-desc" rows="2" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm resize-none outline-none focus:border-red-400 transition-colors"></textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Preço (R$) *</label>
+                    <input type="number" id="pf-price" step="0.01" min="0.01" required class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400 transition-colors">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Categoria *</label>
+                    <select id="pf-category" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400 transition-colors">
+                        <option value="main">Prato</option>
+                        <option value="appetizer">Entrada</option>
+                        <option value="dessert">Sobremesa</option>
+                        <option value="drink">Bebida</option>
+                        <option value="combo">Combo</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Estoque</label>
+                    <input type="number" id="pf-stock" value="-1" min="-1" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400 transition-colors">
+                    <p class="text-xs text-gray-400 mt-1">-1 = ilimitado</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Ordem</label>
+                    <input type="number" id="pf-order" value="0" min="0" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400 transition-colors">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-600 mb-1">Imagens (máx 5)</label>
+                <input type="file" id="pf-image" multiple accept="image/jpeg,image/png,image/webp" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-red-100 file:text-red-500 hover:file:bg-red-100 file:cursor-pointer file:transition-colors">
+                <div id="pf-image-preview" class="mt-2 hidden grid grid-cols-2 sm:grid-cols-5 gap-2">
+                </div>
+            </div>
+            <div id="pf-error" class="hidden text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3"></div>
+            <button type="submit" id="pf-btn" class="w-full btn-primary py-3 rounded-xl text-white font-semibold text-sm">Salvar Produto</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const CL = {appetizer:'Entrada',main:'Prato',dessert:'Sobremesa',drink:'Bebida',combo:'Combo'};
+    let currentCategory = null;
+    let allProducts = [];
+
+    function getImageUrl(url) {
+        if (!url) return '';
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        if (url.startsWith('/media/')) return url;
+        if (url.startsWith('media/')) return '/' + url;
+        return url;
+    }
+
+
+
+    function filterCategory(cat) {
+        currentCategory = cat;
+        document.querySelectorAll('.cat-btn').forEach((b, i) => {
+            const isActive = (cat === null && i === 0) || b.textContent.toLowerCase().includes((cat||'').substring(0,4));
+            b.className = `cat-btn px-3 py-1.5 rounded-lg text-xs font-medium ${isActive ? 'bg-red-100 text-red-500 border border-red-200' : 'bg-gray-100/50 text-gray-500 border border-gray-200/50'}`;
+        });
+        renderProducts();
+    }
+
+    async function loadProducts() {
+        const rid = DashboardNav.getRestaurantId();
+        if (!rid) return;
+        try {
+            const res = await API.get(`/api/restaurants/${rid}/owner-detail/`);
+            const data = await res.json();
+            allProducts = data.products || [];
+            renderProducts();
+        } catch (e) {
+            console.error('Error loading products:', e);
+        }
+    }
+
+    function renderProducts() {
+        let products = allProducts;
+        if (currentCategory) products = products.filter(p => p.category === currentCategory);
+
+        const tbody = document.getElementById('products-tbody');
+        const empty = document.getElementById('products-empty');
+
+        if (!products.length) {
+            tbody.innerHTML = '';
+            empty.classList.remove('hidden');
+            lucide.createIcons();
+            return;
+        }
+        empty.classList.add('hidden');
+
+        tbody.innerHTML = products.map(p => `
+            <tr class="product-row border-b border-gray-200">
+                <td class="px-5 py-3">
+                    <div class="flex items-center gap-3">
+                        ${getImageUrl(p.image_url) ? `<img src="${getImageUrl(p.image_url)}" class="w-10 h-10 rounded-lg object-cover" alt="" onerror="this.outerHTML='<div class=\\'w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center\\'><i data-lucide=\\'image\\' class=\\'w-4 h-4 text-gray-400\\'></i></div>'">` : '<div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center"><i data-lucide="image" class="w-4 h-4 text-gray-400"></i></div>'}
+                        <div>
+                            <p class="text-sm font-medium text-gray-700">${p.name}</p>
+                            <p class="text-xs text-gray-400 truncate max-w-[200px]">${p.description || ''}</p>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-5 py-3 hidden md:table-cell">
+                    <span class="px-2 py-1 rounded-lg text-xs bg-gray-100/50 text-gray-500">${CL[p.category]||p.category}</span>
+                </td>
+                <td class="px-5 py-3">
+                    <span class="text-sm font-medium text-red-500">${formatMoney(p.price)}</span>
+                </td>
+                <td class="px-5 py-3 hidden sm:table-cell">
+                    <span class="text-sm text-gray-500">${p.stock === -1 ? '∞' : p.stock}</span>
+                </td>
+                <td class="px-5 py-3 text-center">
+                    <label class="toggle-switch inline-block">
+                        <input type="checkbox" ${p.is_available ? 'checked' : ''} onchange="toggleAvailability('${p.id}', this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </td>
+                <td class="px-5 py-3 text-center">
+                    <div class="flex items-center justify-center gap-1">
+                        <button onclick="editProduct('${p.id}')" class="p-1.5 rounded-lg hover:bg-gray-200 transition-colors" title="Editar">
+                            <i data-lucide="pencil" class="w-4 h-4 text-gray-500"></i>
+                        </button>
+                        <button onclick="deleteProduct('${p.id}','${p.name}')" class="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors" title="Remover">
+                            <i data-lucide="trash-2" class="w-4 h-4 text-red-400"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+        lucide.createIcons();
+    }
+
+    async function toggleAvailability(pid, available) {
+        const rid = DashboardNav.getRestaurantId();
+        try {
+            await API.put(`/api/restaurants/${rid}/products/${pid}/`, { is_available: available });
+            showToast(available ? 'Produto ativado' : 'Produto desativado');
+            loadProducts();
+        } catch { showToast('Erro', 'error'); }
+    }
+
+    async function deleteProduct(pid, name) {
+        if (!confirm(`Remover "${name}"?`)) return;
+        const rid = DashboardNav.getRestaurantId();
+        try {
+            await API.delete(`/api/restaurants/${rid}/products/${pid}/`);
+            showToast('Produto removido');
+            loadProducts();
+        } catch { showToast('Erro', 'error'); }
+    }
+
+    function openProductModal(product = null) {
+        document.getElementById('product-modal-title').textContent = product ? 'Editar Produto' : 'Novo Produto';
+        document.getElementById('pf-id').value = product ? product.id : '';
+        document.getElementById('pf-name').value = product ? product.name : '';
+        document.getElementById('pf-desc').value = product ? (product.description || '') : '';
+        document.getElementById('pf-price').value = product ? MoneyHelper.format(product.price) : '';
+        document.getElementById('pf-category').value = product ? product.category : 'main';
+        document.getElementById('pf-stock').value = product ? product.stock : -1;
+        document.getElementById('pf-order').value = product ? product.sort_order : 0;
+        document.getElementById('pf-image').value = '';
+        document.getElementById('pf-error').classList.add('hidden');
+
+        const preview = document.getElementById('pf-image-preview');
+        preview.innerHTML = '';
+        if (product && product.images && product.images.length > 0) {
+            product.images.forEach(img => {
+                if (getImageUrl(img)) {
+                    preview.innerHTML += `<img src="${getImageUrl(img)}" class="img-preview w-full h-20 object-cover rounded-lg" alt="Preview">`;
+                }
+            });
+            preview.classList.remove('hidden');
+        } else if (product && getImageUrl(product.image_url)) {
+            preview.innerHTML = `<img src="${getImageUrl(product.image_url)}" class="img-preview w-full h-20 object-cover rounded-lg" alt="Preview">`;
+            preview.classList.remove('hidden');
+        } else {
+            preview.classList.add('hidden');
+        }
+
+        document.getElementById('product-modal').classList.remove('hidden');
+        document.getElementById('product-modal').classList.add('flex');
+    }
+
+    function closeProductModal() {
+        document.getElementById('product-modal').classList.add('hidden');
+        document.getElementById('product-modal').classList.remove('flex');
+    }
+
+    function editProduct(pid) {
+        const p = allProducts.find(x => x.id === pid);
+        if (p) openProductModal(p);
+    }
+
+    // Image preview
+    document.getElementById('pf-image').addEventListener('change', (e) => {
+        const files = Array.from(e.target.files).slice(0, 5);
+        const previewDiv = document.getElementById('pf-image-preview');
+        previewDiv.innerHTML = '';
+        if (files.length > 0) {
+            previewDiv.classList.remove('hidden');
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    previewDiv.innerHTML += `<img src="${ev.target.result}" class="img-preview w-full h-20 object-cover rounded-lg" alt="Preview">`;
+                };
+                reader.readAsDataURL(file);
+            });
+        } else {
+            previewDiv.classList.add('hidden');
+        }
+    });
+
+    document.getElementById('product-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const rid = DashboardNav.getRestaurantId();
+        const pid = document.getElementById('pf-id').value;
+        const btn = document.getElementById('pf-btn');
+        const errDiv = document.getElementById('pf-error');
+        btn.disabled = true; btn.textContent = 'Salvando...'; errDiv.classList.add('hidden');
+
+        const formData = new FormData();
+        formData.append('name', document.getElementById('pf-name').value);
+        formData.append('description', document.getElementById('pf-desc').value);
+        formData.append('price', MoneyHelper.unmask(document.getElementById('pf-price').value));
+        formData.append('category', document.getElementById('pf-category').value);
+        formData.append('stock', document.getElementById('pf-stock').value);
+        formData.append('sort_order', document.getElementById('pf-order').value);
+
+        const imageFiles = document.getElementById('pf-image').files;
+        if (imageFiles.length > 0) {
+            Array.from(imageFiles).slice(0, 5).forEach(file => {
+                formData.append('images', file);
+            });
+        }
+
+        try {
+            let res;
+            if (pid) {
+                // PUT with FormData requires custom request (API.put sends JSON)
+                const token = Auth.getToken();
+                const headers = {};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+                res = await fetch(`/api/restaurants/${rid}/products/${pid}/`, {
+                    method: 'PUT', headers, body: formData,
+                });
+            } else {
+                res = await API.post(`/api/restaurants/${rid}/products/`, formData);
+            }
+            const result = await res.json();
+            if (res.ok) {
+                showToast(pid ? 'Produto atualizado!' : 'Produto adicionado!');
+                closeProductModal();
+                loadProducts();
+            } else {
+                errDiv.textContent = result.error || JSON.stringify(result) || 'Erro ao salvar.';
+                errDiv.classList.remove('hidden');
+            }
+        } catch (err) {
+            errDiv.textContent = 'Erro de conexão: ' + err.message;
+            errDiv.classList.remove('hidden');
+        }
+        btn.disabled = false; btn.textContent = 'Salvar Produto';
+    });
+
+    document.addEventListener('restaurant-loaded', () => loadProducts());
+    document.addEventListener('restaurant-changed', () => loadProducts());
+    document.addEventListener('no-restaurants', () => {
+        window.location.href = '/dashboard/configuracoes/';
+    });
+    DashboardNav.init();
+    MoneyHelper.init('pf-price');
+</script>
+{% endblock %}

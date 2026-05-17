@@ -1,0 +1,362 @@
+{% extends "base.html" %}
+{% block title %}Configurações — Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .main-with-sidebar { padding-bottom: 5rem; }
+    @media (min-width: 1024px) { .main-with-sidebar { padding-bottom: 0; } }
+    .day-row { display: grid; grid-template-columns: 100px 1fr 1fr auto; gap: 8px; align-items: center; }
+    @media (max-width: 640px) { .day-row { grid-template-columns: 80px 1fr 1fr auto; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex min-h-[calc(100vh-4rem)]">
+    {% include "restaurants/dashboard/_sidebar.html" %}
+
+    <div class="flex-1 main-with-sidebar">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 py-6">
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-gray-800">Configurações</h1>
+                <p class="text-sm text-gray-500">Configure seu restaurante</p>
+            </div>
+
+            <div id="settings-loading" class="space-y-4">
+                <div class="skeleton h-32 rounded-2xl"></div>
+                <div class="skeleton h-64 rounded-2xl"></div>
+            </div>
+
+            <form id="settings-form" class="hidden space-y-6">
+                <!-- Status Toggle -->
+                <div class="bg-white border border-gray-100 shadow-card rounded-2xl p-5">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-700">Status do Restaurante</h3>
+                            <p class="text-xs text-gray-400 mt-1" id="status-label">Inativo — não aparece para clientes</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="sf-status" class="sr-only peer" onchange="updateStatusLabel()">
+                            <div class="w-12 h-7 bg-gray-200 rounded-full peer peer-checked:bg-emerald-500 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:after:translate-x-5"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Basic Info -->
+                <div class="bg-white border border-gray-100 shadow-card rounded-2xl p-5">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-4">Informações Básicas</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1 font-medium">Nome do Restaurante *</label>
+                            <input type="text" id="sf-name" required class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1 font-medium">Capa do Restaurante (Opcional)</label>
+                            <input type="file" id="sf-cover" accept="image/*" class="w-full px-4 py-2 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-600 hover:file:bg-red-100">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1 font-medium">Descrição</label>
+                            <textarea id="sf-desc" rows="3" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm resize-none outline-none focus:border-red-400"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1 font-medium">Taxa de Entrega (R$)</label>
+                            <input type="number" id="sf-fee" step="0.01" min="0" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact -->
+                <div class="bg-white border border-gray-100 shadow-card rounded-2xl p-5">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-4">Contato</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1 font-medium">Telefone *</label>
+                            <input type="text" id="sf-phone" required class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1 font-medium">WhatsApp</label>
+                            <input type="text" id="sf-whatsapp" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs text-gray-500 mb-1 font-medium">Email</label>
+                            <input type="email" id="sf-email" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Address -->
+                <div class="bg-white border border-gray-100 shadow-card rounded-2xl p-5">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-4">Endereço</h3>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="col-span-2">
+                                <label class="block text-xs text-gray-500 mb-1 font-medium">Rua *</label>
+                                <input type="text" id="sf-street" required class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1 font-medium">Nº *</label>
+                                <input type="text" id="sf-number" required class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1 font-medium">Bairro *</label>
+                                <input type="text" id="sf-neighborhood" required class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1 font-medium">Complemento</label>
+                                <input type="text" id="sf-complement" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="col-span-1">
+                                <label class="block text-xs text-gray-500 mb-1 font-medium">CEP *</label>
+                                <input type="text" id="sf-zip" required class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1 font-medium">Cidade *</label>
+                                <input type="text" id="sf-city" required class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1 font-medium">UF *</label>
+                                <input type="text" id="sf-state" required maxlength="2" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Business Hours -->
+                <div class="bg-white border border-gray-100 shadow-card rounded-2xl p-5">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-4">Horário de Funcionamento</h3>
+                    <div class="space-y-3" id="business-hours-list"></div>
+                </div>
+
+                <!-- Errors & Submit -->
+                <div id="sf-error" class="hidden text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3"></div>
+                <button type="submit" id="sf-btn" class="w-full btn-primary py-3.5 rounded-xl text-white font-semibold text-sm">
+                    Salvar Configurações
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const DAYS = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+    let isCreating = false;
+
+    function updateStatusLabel() {
+        const active = document.getElementById('sf-status').checked;
+        document.getElementById('status-label').textContent = active
+            ? 'Ativo — visível para clientes'
+            : 'Inativo — não aparece para clientes';
+    }
+
+    function showCreateForm() {
+        isCreating = true;
+        document.getElementById('settings-loading').classList.add('hidden');
+        document.getElementById('settings-form').classList.remove('hidden');
+
+        // Set defaults
+        document.getElementById('sf-status').checked = false;
+        updateStatusLabel();
+        document.getElementById('sf-name').value = '';
+        document.getElementById('sf-cover').value = '';
+        document.getElementById('sf-desc').value = '';
+        document.getElementById('sf-fee').value = MoneyHelper.format(0);
+        document.getElementById('sf-phone').value = '';
+        document.getElementById('sf-whatsapp').value = '';
+        document.getElementById('sf-email').value = '';
+        document.getElementById('sf-street').value = '';
+        document.getElementById('sf-number').value = '';
+        document.getElementById('sf-neighborhood').value = '';
+        document.getElementById('sf-complement').value = '';
+        document.getElementById('sf-zip').value = '';
+        document.getElementById('sf-city').value = '';
+        document.getElementById('sf-state').value = '';
+
+        // Business hours — default all closed
+        const hoursEl = document.getElementById('business-hours-list');
+        hoursEl.innerHTML = DAYS.map((name, i) => `
+            <div class="day-row">
+                <span class="text-sm text-gray-600">${name}</span>
+                <input type="time" id="bh-open-${i}" value="08:00" class="px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400 opacity-40" disabled>
+                <input type="time" id="bh-close-${i}" value="22:00" class="px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400 opacity-40" disabled>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="checkbox" id="bh-closed-${i}" checked onchange="toggleDayInputs(${i})" class="w-4 h-4 rounded border-gray-200 bg-gray-100 text-red-500 focus:ring-red-400">
+                    <span class="text-xs text-gray-400">Fechado</span>
+                </label>
+            </div>
+        `).join('');
+
+        document.getElementById('sf-btn').textContent = 'Criar Restaurante';
+
+        showToast('Configure seu restaurante para começar!', 'info');
+    }
+
+    async function loadSettings() {
+        const rid = DashboardNav.getRestaurantId();
+        if (!rid) return;
+
+        isCreating = false;
+        document.getElementById('settings-loading').classList.remove('hidden');
+        document.getElementById('settings-form').classList.add('hidden');
+
+        try {
+            const res = await API.get(`/api/restaurants/${rid}/owner-detail/`);
+            const r = await res.json();
+
+            document.getElementById('sf-status').checked = r.status === 'active';
+            updateStatusLabel();
+            document.getElementById('sf-name').value = r.name || '';
+            document.getElementById('sf-cover').value = '';
+            document.getElementById('sf-desc').value = r.description || '';
+            document.getElementById('sf-fee').value = MoneyHelper.format(r.delivery_fee || 0);
+
+            // Contact
+            document.getElementById('sf-phone').value = r.contact?.phone || '';
+            document.getElementById('sf-whatsapp').value = r.contact?.whatsapp || '';
+            document.getElementById('sf-email').value = r.contact?.email || '';
+
+            // Address
+            document.getElementById('sf-street').value = r.address?.street || '';
+            document.getElementById('sf-number').value = r.address?.number || '';
+            document.getElementById('sf-neighborhood').value = r.address?.neighborhood || '';
+            document.getElementById('sf-complement').value = r.address?.complement || '';
+            document.getElementById('sf-zip').value = r.address?.zip_code || '';
+            document.getElementById('sf-city').value = r.address?.city || '';
+            document.getElementById('sf-state').value = r.address?.state || '';
+
+            // Business hours
+            const hoursEl = document.getElementById('business-hours-list');
+            const existingHours = {};
+            (r.business_hours || []).forEach(bh => { existingHours[bh.day] = bh; });
+
+            hoursEl.innerHTML = DAYS.map((name, i) => {
+                const bh = existingHours[i] || { day: i, open: '08:00', close: '22:00', is_closed: true };
+                return `
+                    <div class="day-row">
+                        <span class="text-sm text-gray-600">${name}</span>
+                        <input type="time" id="bh-open-${i}" value="${bh.is_closed ? '08:00' : (bh.open || '08:00')}" class="px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400 ${bh.is_closed ? 'opacity-40' : ''}" ${bh.is_closed ? 'disabled' : ''}>
+                        <input type="time" id="bh-close-${i}" value="${bh.is_closed ? '22:00' : (bh.close || '22:00')}" class="px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400 ${bh.is_closed ? 'opacity-40' : ''}" ${bh.is_closed ? 'disabled' : ''}>
+                        <label class="flex items-center gap-1.5 cursor-pointer">
+                            <input type="checkbox" id="bh-closed-${i}" ${bh.is_closed ? 'checked' : ''} onchange="toggleDayInputs(${i})" class="w-4 h-4 rounded border-gray-200 bg-gray-100 text-red-500 focus:ring-red-400">
+                            <span class="text-xs text-gray-400">Fechado</span>
+                        </label>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('sf-btn').textContent = 'Salvar Configurações';
+            document.getElementById('settings-loading').classList.add('hidden');
+            document.getElementById('settings-form').classList.remove('hidden');
+        } catch (e) {
+            console.error('Error loading settings:', e);
+            showToast('Erro ao carregar configurações', 'error');
+        }
+    }
+
+    function toggleDayInputs(day) {
+        const closed = document.getElementById(`bh-closed-${day}`).checked;
+        const openEl = document.getElementById(`bh-open-${day}`);
+        const closeEl = document.getElementById(`bh-close-${day}`);
+        openEl.disabled = closed;
+        closeEl.disabled = closed;
+        openEl.classList.toggle('opacity-40', closed);
+        closeEl.classList.toggle('opacity-40', closed);
+    }
+
+    document.getElementById('settings-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const rid = DashboardNav.getRestaurantId();
+        const btn = document.getElementById('sf-btn');
+        const errDiv = document.getElementById('sf-error');
+        btn.disabled = true;
+        btn.textContent = isCreating ? 'Criando...' : 'Salvando...';
+        errDiv.classList.add('hidden');
+
+        const businessHours = DAYS.map((_, i) => ({
+            day: i,
+            open: document.getElementById(`bh-open-${i}`).value,
+            close: document.getElementById(`bh-close-${i}`).value,
+            is_closed: document.getElementById(`bh-closed-${i}`).checked,
+        }));
+
+        const formData = new FormData();
+        formData.append('name', document.getElementById('sf-name').value);
+        formData.append('description', document.getElementById('sf-desc').value);
+        formData.append('status', document.getElementById('sf-status').checked ? 'active' : 'inactive');
+        formData.append('delivery_fee', MoneyHelper.unmask(document.getElementById('sf-fee').value));
+
+        const coverFile = document.getElementById('sf-cover').files[0];
+        if (coverFile) {
+            formData.append('cover_image', coverFile);
+        }
+
+        const contact = {
+            phone: document.getElementById('sf-phone').value,
+            whatsapp: document.getElementById('sf-whatsapp').value || null,
+            email: document.getElementById('sf-email').value || null,
+        };
+        formData.append('contact', JSON.stringify(contact));
+
+        const address = {
+            street: document.getElementById('sf-street').value,
+            number: document.getElementById('sf-number').value,
+            neighborhood: document.getElementById('sf-neighborhood').value,
+            complement: document.getElementById('sf-complement').value || null,
+            city: document.getElementById('sf-city').value,
+            state: document.getElementById('sf-state').value,
+            zip_code: document.getElementById('sf-zip').value,
+        };
+        formData.append('address', JSON.stringify(address));
+        formData.append('business_hours', JSON.stringify(businessHours));
+
+        try {
+            let res;
+            if (isCreating) {
+                res = await API.post('/api/restaurants/', formData);
+            } else {
+                res = await API.put(`/api/restaurants/${rid}/`, formData);
+            }
+            const result = await res.json();
+            if (res.ok) {
+                showToast(isCreating ? 'Restaurante criado com sucesso!' : 'Configurações salvas!');
+                if (isCreating) {
+                    isCreating = false;
+                    // Reload the dashboard navigation to pick up the new restaurant
+                    await DashboardNav.loadRestaurants();
+                    loadSettings();
+                } else {
+                    DashboardNav.loadRestaurants();
+                }
+            } else {
+                errDiv.textContent = result.error || JSON.stringify(result) || 'Erro ao salvar.';
+                errDiv.classList.remove('hidden');
+            }
+        } catch (err) {
+            errDiv.textContent = 'Erro de conexão: ' + err.message;
+            errDiv.classList.remove('hidden');
+        }
+        btn.disabled = false;
+        btn.textContent = isCreating ? 'Criar Restaurante' : 'Salvar Configurações';
+    });
+
+    document.addEventListener('restaurant-loaded', () => loadSettings());
+    document.addEventListener('restaurant-changed', () => loadSettings());
+    document.addEventListener('no-restaurants', () => showCreateForm());
+    DashboardNav.init();
+
+    CEPHelper.init('sf-zip', {
+        street: 'sf-street',
+        neighborhood: 'sf-neighborhood',
+        city: 'sf-city',
+        state: 'sf-state',
+        complement: 'sf-complement',
+        number: 'sf-number'
+    });
+
+    MoneyHelper.init('sf-fee');
+</script>
+{% endblock %}

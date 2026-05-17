@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+{% block title %}Pedidos — Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .order-card { transition: all 0.3s ease; }
+    .order-card:hover { transform: translateY(-1px); }
+    .status-tab { cursor: pointer; transition: all 0.2s; }
+    .status-tab.active { border-bottom: 2px solid #f97316; color: #fb923c; }
+    .main-with-sidebar { padding-bottom: 5rem; }
+    @media (min-width: 1024px) { .main-with-sidebar { padding-bottom: 0; } }
+    .notification-pulse { animation: notifPulse 2s infinite; }
+    @keyframes notifPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(249,115,22,0.4); } 50% { box-shadow: 0 0 0 12px rgba(249,115,22,0); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex min-h-[calc(100vh-4rem)]">
+    {% include "restaurants/dashboard/_sidebar.html" %}
+
+    <div class="flex-1 main-with-sidebar">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">Pedidos</h1>
+                    <p class="text-sm text-gray-500">Gerencie os pedidos em tempo real</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div id="ws-status" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100/50 text-xs">
+                        <div class="w-2 h-2 rounded-full bg-gray-400" id="ws-dot"></div>
+                        <span id="ws-text" class="text-gray-400">Conectando...</span>
+                    </div>
+                    <button onclick="loadOrders()" class="p-2 rounded-xl hover:bg-gray-100 transition-colors" title="Atualizar">
+                        <i data-lucide="refresh-cw" class="w-5 h-5 text-gray-500"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Status Tabs -->
+            <div class="flex gap-1 mb-6 overflow-x-auto border-b border-gray-200/50 pb-0">
+                <button onclick="filterTab(null)" class="status-tab px-4 py-2.5 text-sm font-medium text-gray-500 active" data-tab="all">Todos</button>
+                <button onclick="filterTab('pending')" class="status-tab px-4 py-2.5 text-sm font-medium text-gray-500 relative" data-tab="pending">
+                    Pendentes
+                    <span id="pending-count" class="hidden ml-1 px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold"></span>
+                </button>
+                <button onclick="filterTab('confirmed')" class="status-tab px-4 py-2.5 text-sm font-medium text-gray-500" data-tab="confirmed">Confirmados</button>
+                <button onclick="filterTab('preparing')" class="status-tab px-4 py-2.5 text-sm font-medium text-gray-500" data-tab="preparing">Preparando</button>
+                <button onclick="filterTab('ready')" class="status-tab px-4 py-2.5 text-sm font-medium text-gray-500" data-tab="ready">Prontos</button>
+                <button onclick="filterTab('delivered')" class="status-tab px-4 py-2.5 text-sm font-medium text-gray-500" data-tab="delivered">Entregues</button>
+                <button onclick="filterTab('cancelled')" class="status-tab px-4 py-2.5 text-sm font-medium text-gray-500" data-tab="cancelled">Cancelados</button>
+            </div>
+
+            <!-- Orders List -->
+            <div id="orders-list" class="space-y-4"></div>
+            <div id="orders-empty" class="hidden text-center py-16 bg-white border border-gray-100 shadow-card rounded-2xl">
+                <i data-lucide="inbox" class="w-12 h-12 text-gray-400 mx-auto mb-3"></i>
+                <p class="text-gray-500">Nenhum pedido encontrado.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Order Detail Modal -->
+<div id="order-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-white border border-gray-100 shadow-card rounded-2xl p-6 w-full max-w-lg mx-4 max-h-[85vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold text-gray-800" id="modal-order-number"></h2>
+            <button onclick="closeOrderModal()" class="p-2 rounded-lg hover:bg-gray-200 transition-colors"><i data-lucide="x" class="w-5 h-5 text-gray-500"></i></button>
+        </div>
+        <div id="modal-content"></div>
+    </div>
+</div>
+
+<!-- Cancel Modal -->
+<div id="cancel-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-white border border-gray-100 shadow-card rounded-2xl p-6 w-full max-w-md mx-4">
+        <h2 class="text-lg font-bold text-gray-800 mb-4">Cancelar Pedido</h2>
+        <textarea id="cancel-reason" rows="3" placeholder="Motivo do cancelamento (obrigatório)" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm resize-none outline-none focus:border-red-500/50"></textarea>
+        <div class="flex gap-3 mt-4">
+            <button onclick="closeCancelModal()" class="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-600 text-sm font-medium hover:bg-gray-200 transition-colors">Voltar</button>
+            <button onclick="confirmCancel()" id="cancel-confirm-btn" class="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors">Confirmar Cancelamento</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const SL = {pending:'Pendente',confirmed:'Confirmado',preparing:'Preparando',ready:'Pronto',delivered:'Entregue',cancelled:'Cancelado'};
+    const SC = {pending:'bg-amber-500/20 text-amber-400',confirmed:'bg-blue-500/20 text-blue-400',preparing:'bg-violet-500/20 text-violet-400',ready:'bg-emerald-500/20 text-emerald-400',delivered:'bg-emerald-600/20 text-emerald-300',cancelled:'bg-red-500/20 text-red-400'};
+    const NS = {pending:'confirmed',confirmed:'preparing',preparing:'ready',ready:'delivered'};
+    const NL = {confirmed:'Confirmar',preparing:'Preparar',ready:'Pronto p/ entrega',delivered:'Entregar'};
+
+    let currentFilter = null;
+    let cancelOrderId = null;
+    let ws = null;
+
+
+
+    function filterTab(status) {
+        currentFilter = status;
+        document.querySelectorAll('.status-tab').forEach(t => {
+            const tabVal = t.dataset.tab;
+            t.classList.toggle('active', (status === null && tabVal === 'all') || tabVal === status);
+        });
+        loadOrders();
+    }
+
+    async function loadOrders() {
+        const rid = DashboardNav.getRestaurantId();
+        if (!rid) return;
+        let url = `/api/orders/?restaurant_id=${rid}`;
+        if (currentFilter) url += `&status=${currentFilter}`;
+        try {
+            const res = await API.get(url);
+            const d = await res.json();
+            const list = document.getElementById('orders-list');
+            const empty = document.getElementById('orders-empty');
+
+            if (!d.results || !d.results.length) {
+                list.innerHTML = '';
+                empty.classList.remove('hidden');
+                lucide.createIcons();
+                return;
+            }
+            empty.classList.add('hidden');
+
+            // Count pending
+            const pendingCount = d.results.filter(o => o.status === 'pending').length;
+            const pcEl = document.getElementById('pending-count');
+            if (pendingCount > 0) { pcEl.textContent = pendingCount; pcEl.classList.remove('hidden'); }
+            else { pcEl.classList.add('hidden'); }
+
+            list.innerHTML = d.results.map(o => `
+                <div class="order-card bg-white border border-gray-100 shadow-card rounded-2xl p-5 fade-in ${o.status === 'pending' ? 'notification-pulse border border-red-200' : ''}">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm font-bold text-red-500">${o.order_number}</span>
+                            <span class="text-xs text-gray-400">${new Date(o.created_at).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2.5 py-1 rounded-lg text-xs font-medium ${SC[o.status]}">${SL[o.status]}</span>
+                            <button onclick="openOrderDetail('${o.id}')" class="p-1.5 rounded-lg hover:bg-gray-200 transition-colors" title="Detalhes">
+                                <i data-lucide="eye" class="w-4 h-4 text-gray-500"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="space-y-1 mb-3">
+                        ${o.items.slice(0,3).map(i => `<div class="flex justify-between text-sm"><span class="text-gray-600">${i.quantity}x ${i.name}</span><span class="text-gray-400">${formatMoney(i.subtotal)}</span></div>`).join('')}
+                        ${o.items.length > 3 ? `<p class="text-xs text-gray-400">+ ${o.items.length-3} ite${o.items.length-3 > 1 ? 'ns' : 'm'}</p>` : ''}
+                    </div>
+                    <div class="flex items-center justify-between border-t border-gray-200/50 pt-3">
+                        <div class="flex items-center gap-3">
+                            <span class="font-semibold text-gray-700">${formatMoney(o.total)}</span>
+                            <span class="text-xs text-gray-400">${o.delivery_method === 'delivery' ? '🛵 Entrega' : '🏪 Retirada'}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            ${NS[o.status] ? `<button onclick="advanceStatus('${o.id}','${NS[o.status]}')" class="btn-primary px-4 py-2 rounded-xl text-xs text-white font-medium">${NL[NS[o.status]]}</button>` : ''}
+                            ${['pending','confirmed','preparing','ready'].includes(o.status) ? `<button onclick="openCancelModal('${o.id}')" class="px-3 py-2 rounded-xl bg-red-500/10 text-red-400 text-xs hover:bg-red-500/20 transition-colors">Cancelar</button>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        } catch (e) {
+            console.error('Error loading orders:', e);
+        }
+    }
+
+    async function advanceStatus(oid, newSt) {
+        try {
+            const res = await API.patch(`/api/orders/${oid}/status/`, {status: newSt});
+            if (res.ok) { showToast('Status atualizado!'); loadOrders(); }
+            else { const d = await res.json(); showToast(d.error || 'Erro', 'error'); }
+        } catch { showToast('Erro de conexão', 'error'); }
+    }
+
+    async function openOrderDetail(oid) {
+        try {
+            const res = await API.get(`/api/orders/${oid}/`);
+            const o = await res.json();
+            document.getElementById('modal-order-number').textContent = o.order_number;
+            document.getElementById('modal-content').innerHTML = `
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2">
+                        <span class="px-2.5 py-1 rounded-lg text-xs font-medium ${SC[o.status]}">${SL[o.status]}</span>
+                        <span class="text-xs text-gray-400">${new Date(o.created_at).toLocaleString('pt-BR')}</span>
+                    </div>
+                    <div>
+                        <h4 class="text-xs text-gray-400 font-medium mb-2 uppercase tracking-wider">Itens do Pedido</h4>
+                        ${o.items.map(i => `
+                            <div class="flex items-center gap-3 py-2 border-b border-gray-200">
+                                ${i.image_url ? `<img src="${i.image_url}" class="w-10 h-10 rounded-lg object-cover" alt="">` : '<div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center"><i data-lucide="package" class="w-4 h-4 text-gray-400"></i></div>'}
+                                <div class="flex-1"><p class="text-sm text-gray-700">${i.name}</p><p class="text-xs text-gray-400">${i.quantity}x · ${formatMoney(i.price)}</p></div>
+                                <span class="text-sm font-medium text-gray-600">${formatMoney(i.subtotal)}</span>
+                            </div>
+                        `).join('')}
+                        <div class="flex justify-between pt-3 mt-1"><span class="font-semibold text-gray-700">Total</span><span class="font-bold text-red-500 text-lg">${formatMoney(o.total)}</span></div>
+                    </div>
+                    ${o.delivery_address ? `
+                    <div>
+                        <h4 class="text-xs text-gray-400 font-medium mb-2 uppercase tracking-wider">Endereço de Entrega</h4>
+                        <p class="text-sm text-gray-600">${o.delivery_address.street}, ${o.delivery_address.number}${o.delivery_address.complement ? ' - '+o.delivery_address.complement : ''}</p>
+                        <p class="text-sm text-gray-500">${o.delivery_address.neighborhood} · ${o.delivery_address.city}/${o.delivery_address.state}</p>
+                        ${o.delivery_address.zip_code ? `<p class="text-xs text-gray-400">CEP: ${o.delivery_address.zip_code}</p>` : ''}
+                    </div>` : '<p class="text-sm text-gray-500"><i data-lucide="store" class="w-4 h-4 inline"></i> Retirada no local</p>'}
+                    ${o.notes ? `<div><h4 class="text-xs text-gray-400 font-medium mb-1 uppercase tracking-wider">Observações</h4><p class="text-sm text-gray-600 bg-gray-100/30 rounded-xl px-3 py-2">${o.notes}</p></div>` : ''}
+                    <div>
+                        <h4 class="text-xs text-gray-400 font-medium mb-2 uppercase tracking-wider">Histórico</h4>
+                        <div class="space-y-1">
+                            ${o.status_history.map(sh => `<div class="flex items-center gap-2 text-xs"><span class="px-2 py-0.5 rounded-lg ${SC[sh.status]}">${SL[sh.status]}</span><span class="text-gray-400">${sh.changed_at ? new Date(sh.changed_at).toLocaleString('pt-BR') : ''}</span></div>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('order-modal').classList.remove('hidden');
+            document.getElementById('order-modal').classList.add('flex');
+            lucide.createIcons();
+        } catch { showToast('Erro ao carregar detalhes', 'error'); }
+    }
+
+    function closeOrderModal() {
+        document.getElementById('order-modal').classList.add('hidden');
+        document.getElementById('order-modal').classList.remove('flex');
+    }
+
+    function openCancelModal(oid) {
+        cancelOrderId = oid;
+        document.getElementById('cancel-reason').value = '';
+        document.getElementById('cancel-modal').classList.remove('hidden');
+        document.getElementById('cancel-modal').classList.add('flex');
+    }
+
+    function closeCancelModal() {
+        cancelOrderId = null;
+        document.getElementById('cancel-modal').classList.add('hidden');
+        document.getElementById('cancel-modal').classList.remove('flex');
+    }
+
+    async function confirmCancel() {
+        const reason = document.getElementById('cancel-reason').value.trim();
+        if (!reason) { showToast('Informe o motivo do cancelamento', 'warning'); return; }
+        const btn = document.getElementById('cancel-confirm-btn');
+        btn.disabled = true; btn.textContent = 'Cancelando...';
+        try {
+            const res = await API.patch(`/api/orders/${cancelOrderId}/status/`, { status: 'cancelled', cancellation_reason: reason });
+            if (res.ok) { showToast('Pedido cancelado'); closeCancelModal(); loadOrders(); }
+            else { const d = await res.json(); showToast(d.error || 'Erro', 'error'); }
+        } catch { showToast('Erro', 'error'); }
+        btn.disabled = false; btn.textContent = 'Confirmar Cancelamento';
+    }
+
+    // WebSocket for real-time updates
+    function connectWS() {
+        const rid = DashboardNav.getRestaurantId();
+        if (!rid) return;
+        if (ws) ws.close();
+        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const token = Auth.getToken();
+        ws = new WebSocket(`${proto}//${location.host}/ws/orders/${rid}/?token=${token}`);
+        ws.onopen = () => {
+            document.getElementById('ws-dot').className = 'w-2 h-2 rounded-full bg-emerald-400';
+            document.getElementById('ws-text').className = 'text-emerald-400';
+            document.getElementById('ws-text').textContent = 'Ao vivo';
+        };
+        ws.onmessage = () => {
+            loadOrders();
+            // Play notification sound
+            try { const a = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQ=='); a.play().catch(()=>{}); } catch {}
+            showToast('🔔 Novo pedido recebido!', 'info');
+        };
+        ws.onclose = () => {
+            document.getElementById('ws-dot').className = 'w-2 h-2 rounded-full bg-gray-400';
+            document.getElementById('ws-text').className = 'text-gray-400';
+            document.getElementById('ws-text').textContent = 'Desconectado';
+            setTimeout(connectWS, 5000);
+        };
+    }
+
+    document.addEventListener('restaurant-loaded', () => { loadOrders(); connectWS(); });
+    document.addEventListener('restaurant-changed', () => { loadOrders(); connectWS(); });
+    DashboardNav.init();
+
+    // Auto-refresh every 30s
+    setInterval(() => { if (DashboardNav.getRestaurantId()) loadOrders(); }, 30000);
+</script>
+{% endblock %}
