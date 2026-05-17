@@ -53,8 +53,8 @@ sequenceDiagram
     Core-->>API: Representação de Domínio (Order)
     
     %% Comunicação Assíncrona (Event-driven)
-    API-)-WS: Broadcast Assíncrono (notify_new_order)
-    WS-)-UI: Sincroniza Terminal do Gestor (Tenant_WS_Group)
+    API-)WS: Broadcast Assíncrono (notify_new_order)
+    WS-)UI: Sincroniza Terminal do Gestor (Tenant_WS_Group)
     
     API-->>UI: HTTP 201 Created (Recibo Transacional: #ORD-XXXX)
     UI-->>C: Confirmação Visual Renderizada
