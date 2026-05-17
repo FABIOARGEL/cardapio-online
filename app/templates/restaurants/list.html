@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block title %}Restaurantes — Cardápio Online{% endblock %}
+
+{% block extra_css %}
+<style>
+    .restaurant-card {
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        background: #fff;
+        border: 1px solid #f0f0f0;
+    }
+    .restaurant-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 20px 45px rgba(0,0,0,0.1);
+        border-color: transparent;
+    }
+    .restaurant-card:hover .card-cover img { transform: scale(1.08); }
+    .card-cover img { transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+    .card-cover .fallback-cover {
+        background: linear-gradient(135deg, rgba(229,57,53,0.06) 0%, rgba(255,82,82,0.04) 50%, rgba(229,57,53,0.06) 100%);
+    }
+    .status-badge { backdrop-filter: blur(8px); }
+    .search-glow:focus-within {
+        box-shadow: 0 0 0 3px rgba(229,57,53,0.15), 0 8px 25px rgba(0,0,0,0.08);
+        border-color: #E53935;
+    }
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .hero-pattern {
+        background-image: radial-gradient(circle at 20% 50%, rgba(229,57,53,0.04) 0%, transparent 50%),
+                          radial-gradient(circle at 80% 20%, rgba(229,57,53,0.03) 0%, transparent 50%);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="relative overflow-hidden hero-pattern">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-4 md:pt-8 md:pb-6 relative">
+
+        <!-- Search Bar -->
+        <div class="max-w-2xl mx-auto mb-6 fade-in">
+            <div class="bg-white rounded-2xl border border-gray-200 p-1.5 flex gap-2 search-glow transition-all shadow-card">
+                <div class="flex-1 relative">
+                    <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"></i>
+                    <input id="search-input" type="text" placeholder="Buscar restaurantes..."
+                        class="w-full pl-12 pr-4 py-3 bg-transparent text-gray-800 placeholder-gray-400 outline-none text-sm rounded-xl">
+                </div>
+                <button onclick="searchRestaurants()" class="btn-primary px-6 py-3 rounded-xl text-sm font-semibold text-white">Buscar</button>
+            </div>
+        </div>
+
+        <!-- Category Filters -->
+        <div class="flex flex-wrap justify-center gap-2 mb-2 fade-in">
+            <button onclick="filterCategory(null)" class="category-btn active px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-red-500 text-white shadow-sm" data-category="all">
+                <i data-lucide="grid-3x3" class="w-4 h-4 inline mr-1"></i>Todos
+            </button>
+            <button onclick="filterCategory('main')" class="category-btn px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50" data-category="main">
+                <i data-lucide="beef" class="w-4 h-4 inline mr-1"></i>Pratos
+            </button>
+            <button onclick="filterCategory('drink')" class="category-btn px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50" data-category="drink">
+                <i data-lucide="cup-soda" class="w-4 h-4 inline mr-1"></i>Bebidas
+            </button>
+            <button onclick="filterCategory('dessert')" class="category-btn px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50" data-category="dessert">
+                <i data-lucide="cake-slice" class="w-4 h-4 inline mr-1"></i>Sobremesas
+            </button>
+            <button onclick="filterCategory('combo')" class="category-btn px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50" data-category="combo">
+                <i data-lucide="package" class="w-4 h-4 inline mr-1"></i>Combos
+            </button>
+        </div>
+    </div>
+</section>
+
+<!-- Restaurant Grid -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+    <div id="results-counter" class="hidden mb-6 text-sm text-gray-500 fade-in">
+        <span id="results-count"></span> restaurante(s) encontrado(s)
+    </div>
+
+    <div id="restaurants-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="skeleton rounded-2xl h-80"></div>
+        <div class="skeleton rounded-2xl h-80"></div>
+        <div class="skeleton rounded-2xl h-80"></div>
+        <div class="skeleton rounded-2xl h-80 hidden sm:block"></div>
+        <div class="skeleton rounded-2xl h-80 hidden lg:block"></div>
+        <div class="skeleton rounded-2xl h-80 hidden lg:block"></div>
+    </div>
+
+    <div id="empty-state" class="hidden text-center py-20 fade-in">
+        <div class="bg-white rounded-3xl p-12 max-w-md mx-auto border border-gray-100 shadow-card">
+            <div class="w-20 h-20 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-6">
+                <i data-lucide="search-x" class="w-10 h-10 text-red-300"></i>
+            </div>
+            <h3 class="text-xl font-semibold text-gray-800 mb-3">Nenhum restaurante encontrado</h3>
+            <p class="text-gray-500 text-sm mb-6">Tente buscar com outros termos ou limpe os filtros.</p>
+            <button onclick="clearFilters()" class="btn-primary px-6 py-3 rounded-xl text-sm text-white font-semibold">
+                <i data-lucide="refresh-cw" class="w-4 h-4 inline mr-2"></i>Limpar Filtros
+            </button>
+        </div>
+    </div>
+
+    <div id="pagination" class="hidden flex justify-center items-center gap-4 mt-12">
+        <button id="prev-page" onclick="changePage(-1)" class="px-5 py-2.5 rounded-xl bg-white border border-gray-200 text-sm text-gray-600 hover:text-red-500 hover:border-red-200 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm" disabled>
+            <i data-lucide="chevron-left" class="w-4 h-4 inline mr-1"></i> Anterior
+        </button>
+        <span id="page-info" class="text-sm text-gray-500 px-4 py-2 rounded-xl bg-gray-50"></span>
+        <button id="next-page" onclick="changePage(1)" class="px-5 py-2.5 rounded-xl bg-white border border-gray-200 text-sm text-gray-600 hover:text-red-500 hover:border-red-200 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm" disabled>
+            Próximo <i data-lucide="chevron-right" class="w-4 h-4 inline ml-1"></i>
+        </button>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentPage = 1;
+    let currentSearch = '';
+    let currentCategory = null;
+
+    function getImageUrl(url) {
+        if (!url) return '';
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        if (url.startsWith('/media/')) return url;
+        if (url.startsWith('media/')) return '/' + url;
+        return url;
+    }
+
+    function renderRestaurantCard(r) {
+        const imgUrl = getImageUrl(r.cover_image_url);
+        const rating = r.rating?.average?.toFixed(1) || '0.0';
+        const reviewCount = r.rating?.count || 0;
+        const neighborhood = r.address?.neighborhood || '';
+        const city = r.address?.city || '';
+        const location = [neighborhood, city].filter(Boolean).join(', ');
+        const deliveryFee = r.delivery_fee > 0 ? formatMoney(r.delivery_fee) : 'Grátis';
+
+        return `
+            <a href="/restaurante/${r.slug}/" class="restaurant-card rounded-2xl overflow-hidden block fade-in group">
+                <div class="card-cover h-44 bg-gray-100 relative overflow-hidden">
+                    ${imgUrl
+                        ? `<img src="${imgUrl}" alt="${r.name}" class="w-full h-full object-cover"
+                                onerror="this.parentElement.innerHTML='<div class=\\'fallback-cover w-full h-full flex items-center justify-center\\'><i data-lucide=\\'utensils\\' class=\\'w-12 h-12 text-gray-300\\'></i></div>'; lucide.createIcons();">`
+                        : `<div class="fallback-cover w-full h-full flex items-center justify-center">
+                            <i data-lucide="utensils" class="w-12 h-12 text-gray-300"></i>
+                           </div>`
+                    }
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+                    <div class="absolute top-3 right-3">
+                        <span class="status-badge px-2.5 py-1 rounded-lg bg-emerald-500/90 text-white text-xs font-semibold shadow-sm">
+                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-white mr-1 animate-pulse"></span>Aberto
+                        </span>
+                    </div>
+                    <div class="absolute bottom-3 left-3">
+                        <div class="flex items-center gap-1 bg-white/90 backdrop-blur-sm rounded-lg px-2.5 py-1 shadow-sm">
+                            <i data-lucide="star" class="w-3.5 h-3.5 text-amber-400 fill-amber-400"></i>
+                            <span class="text-xs font-bold text-gray-800">${rating}</span>
+                            <span class="text-[10px] text-gray-500">(${reviewCount})</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-5">
+                    <h3 class="text-lg font-bold text-gray-800 mb-1.5 group-hover:text-red-500 transition-colors">${r.name}</h3>
+                    <p class="text-sm text-gray-500 line-clamp-2 mb-4">${r.description || 'Restaurante parceiro'}</p>
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-1.5 text-gray-400">
+                            <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+                            <span>${location || 'Localização não informada'}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 ${r.delivery_fee > 0 ? 'text-gray-500' : 'text-emerald-500 font-semibold'}">
+                            <i data-lucide="bike" class="w-3.5 h-3.5"></i>
+                            <span>${deliveryFee}</span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        `;
+    }
+
+    async function loadRestaurants() {
+        const grid = document.getElementById('restaurants-grid');
+        const empty = document.getElementById('empty-state');
+        const pagination = document.getElementById('pagination');
+        const counter = document.getElementById('results-counter');
+        let url = `/api/restaurants/?page=${currentPage}`;
+        if (currentSearch) url += `&search=${encodeURIComponent(currentSearch)}`;
+        if (currentCategory) url += `&category=${currentCategory}`;
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            if (!data.results || data.results.length === 0) { grid.innerHTML = ''; empty.classList.remove('hidden'); pagination.classList.add('hidden'); counter.classList.add('hidden'); return; }
+            empty.classList.add('hidden'); counter.classList.remove('hidden');
+            document.getElementById('results-count').textContent = data.count;
+            grid.innerHTML = data.results.map(r => renderRestaurantCard(r)).join('');
+            lucide.createIcons();
+            if (data.total_pages > 1) {
+                pagination.classList.remove('hidden');
+                document.getElementById('page-info').textContent = `Página ${data.page} de ${data.total_pages}`;
+                document.getElementById('prev-page').disabled = data.page <= 1;
+                document.getElementById('next-page').disabled = data.page >= data.total_pages;
+            } else { pagination.classList.add('hidden'); }
+        } catch (err) {
+            console.error('Error loading restaurants:', err);
+            grid.innerHTML = `<div class="col-span-full text-center py-12"><div class="bg-white rounded-2xl p-8 max-w-sm mx-auto border border-gray-100 shadow-card"><i data-lucide="wifi-off" class="w-10 h-10 text-red-300 mx-auto mb-3"></i><p class="text-red-500 font-medium mb-2">Erro ao carregar</p><p class="text-gray-500 text-sm mb-4">Não foi possível carregar os restaurantes.</p><button onclick="loadRestaurants()" class="btn-primary px-5 py-2 rounded-xl text-sm text-white font-medium">Tentar Novamente</button></div></div>`;
+            lucide.createIcons();
+        }
+    }
+
+    function searchRestaurants() { currentSearch = document.getElementById('search-input').value.trim(); currentPage = 1; loadRestaurants(); }
+
+    function filterCategory(cat) {
+        currentCategory = cat; currentPage = 1;
+        document.querySelectorAll('.category-btn').forEach(b => { b.classList.remove('bg-red-500', 'text-white', 'shadow-sm'); b.classList.add('bg-white', 'text-gray-600', 'border', 'border-gray-200'); });
+        const active = cat ? document.querySelector(`[data-category="${cat}"]`) : document.querySelector('[data-category="all"]');
+        if (active) { active.classList.add('bg-red-500', 'text-white', 'shadow-sm'); active.classList.remove('bg-white', 'text-gray-600', 'border', 'border-gray-200'); }
+        loadRestaurants();
+    }
+
+    function clearFilters() {
+        currentSearch = ''; currentCategory = null; currentPage = 1;
+        document.getElementById('search-input').value = '';
+        document.querySelectorAll('.category-btn').forEach(b => { b.classList.remove('bg-red-500', 'text-white', 'shadow-sm'); b.classList.add('bg-white', 'text-gray-600', 'border', 'border-gray-200'); });
+        const allBtn = document.querySelector('[data-category="all"]');
+        if (allBtn) { allBtn.classList.add('bg-red-500', 'text-white', 'shadow-sm'); allBtn.classList.remove('bg-white', 'text-gray-600', 'border', 'border-gray-200'); }
+        loadRestaurants();
+    }
+
+    function changePage(delta) { currentPage += delta; loadRestaurants(); document.getElementById('restaurants-grid').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    document.getElementById('search-input')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') searchRestaurants(); });
+    loadRestaurants();
+</script>
+{% endblock %}

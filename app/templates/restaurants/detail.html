@@ -1,0 +1,405 @@
+{% extends "base.html" %}
+{% block title %}Cardápio — Cardápio Online{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); background: #fff; border: 1px solid #f0f0f0; }
+    .product-card:hover { transform: translateY(-4px); box-shadow: 0 12px 35px rgba(0,0,0,0.1); border-color: transparent; }
+    .product-card:hover .product-img img { transform: scale(1.06); }
+    .product-img img { transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+    .product-fallback { background: linear-gradient(135deg, rgba(229,57,53,0.05) 0%, rgba(255,82,82,0.03) 100%); }
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    .add-btn { min-width: 44px; min-height: 44px; }
+    
+    /* Modal Animations */
+    .modal-overlay { opacity: 0; transition: opacity 0.3s ease; }
+    .modal-overlay.active { opacity: 1; }
+    .modal-content { transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    @media (min-width: 640px) {
+        .modal-content { transform: translateY(20px) scale(0.95); opacity: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .modal-content.active { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    .modal-content.active { transform: translateY(0); }
+    .gallery-thumb { border: 2px solid transparent; transition: all 0.2s; }
+    .gallery-thumb.active { border-color: #ef4444; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Back Button -->
+    <a href="/restaurantes/" class="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-red-500 transition-colors mb-6 fade-in">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar aos restaurantes
+    </a>
+
+    <!-- Restaurant Header -->
+    <div id="restaurant-header" class="bg-white rounded-2xl overflow-hidden mb-8 fade-in shadow-card border border-gray-100">
+        <div id="cover-container" class="h-48 md:h-64 bg-gray-100 relative overflow-hidden">
+            <div id="cover-fallback" class="w-full h-full flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-red-50">
+                <i data-lucide="utensils" class="w-16 h-16 text-gray-300"></i>
+            </div>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+            <div class="absolute bottom-6 left-6 right-6">
+                <h1 id="restaurant-name" class="text-3xl md:text-4xl font-extrabold text-white mb-2"></h1>
+                <p id="restaurant-desc" class="text-white/80 text-sm max-w-2xl mb-3"></p>
+                <div class="flex flex-wrap items-center gap-4">
+                    <div class="flex items-center gap-1.5 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-1.5 shadow-sm">
+                        <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+                        <span id="restaurant-rating" class="text-sm font-bold text-gray-800">0.0</span>
+                        <span id="restaurant-reviews" class="text-xs text-gray-500"></span>
+                    </div>
+                    <div id="restaurant-location" class="flex items-center gap-1.5 text-xs text-white/90">
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+                        <span id="restaurant-address"></span>
+                    </div>
+                    <div id="restaurant-delivery" class="flex items-center gap-1.5 text-xs text-white/90">
+                        <i data-lucide="bike" class="w-3.5 h-3.5"></i>
+                        <span id="restaurant-delivery-fee"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Tabs -->
+    <div id="category-tabs" class="flex overflow-x-auto gap-2 pb-4 mb-6 scrollbar-hide fade-in"></div>
+
+    <!-- Products Count -->
+    <div id="products-count" class="hidden mb-4 text-sm text-gray-500 fade-in">
+        <span id="products-count-text"></span>
+    </div>
+
+    <!-- Products Grid -->
+    <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div class="skeleton rounded-2xl h-72"></div>
+        <div class="skeleton rounded-2xl h-72"></div>
+        <div class="skeleton rounded-2xl h-72"></div>
+    </div>
+
+    <div id="products-empty" class="hidden text-center py-16 fade-in">
+        <div class="bg-white rounded-2xl p-10 max-w-sm mx-auto border border-gray-100 shadow-card">
+            <div class="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="package-x" class="w-8 h-8 text-red-300"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">Nenhum produto nesta categoria</h3>
+            <p class="text-gray-500 text-sm">Tente selecionar outra categoria.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Product Details Modal -->
+<div id="product-modal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm modal-overlay">
+    <div id="product-modal-content" class="bg-white w-full sm:max-w-xl h-[90vh] sm:h-auto sm:max-h-[90vh] sm:rounded-2xl rounded-t-2xl flex flex-col modal-content relative">
+        <button onclick="closeProductModal()" class="absolute top-4 right-4 z-20 w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-gray-800 shadow-sm hover:bg-white transition-colors">
+            <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+
+        <!-- Main Image -->
+        <div class="relative w-full h-64 sm:h-80 bg-gray-100 flex-shrink-0 sm:rounded-t-2xl overflow-hidden">
+            <img id="pm-main-img" src="" class="w-full h-full object-cover transition-opacity duration-300">
+            <div id="pm-fallback" class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-red-50 to-white hidden">
+                <i data-lucide="image" class="w-16 h-16 text-gray-300"></i>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto pb-24 scrollbar-hide">
+            <!-- Thumbnails Gallery -->
+            <div id="pm-gallery" class="px-4 mt-4 flex gap-2 overflow-x-auto scrollbar-hide pb-2"></div>
+
+            <div class="p-5 sm:p-6">
+                <h2 id="pm-name" class="text-2xl font-bold text-gray-800 mb-2"></h2>
+                
+                <div class="flex items-center gap-3 mb-5">
+                    <span id="pm-category" class="px-2.5 py-1 bg-gray-100 text-gray-600 text-xs rounded-lg font-medium"></span>
+                    <div class="flex items-center gap-1 text-amber-500 text-sm font-bold bg-amber-50 px-2 py-0.5 rounded-md">
+                        <i data-lucide="star" class="w-3.5 h-3.5 fill-amber-500"></i>
+                        <span id="pm-rating">5.0</span>
+                    </div>
+                </div>
+
+                <p id="pm-desc" class="text-gray-500 text-sm leading-relaxed mb-8"></p>
+
+                <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 mb-4">
+                    <h3 class="text-xs font-bold text-gray-800 uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <i data-lucide="store" class="w-4 h-4"></i> Informações do Restaurante
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm text-gray-400">
+                                <i data-lucide="clock" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400">Entrega Estimada</p>
+                                <p class="font-medium text-gray-700" id="pm-delivery-time"></p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm text-gray-400">
+                                <i data-lucide="bike" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400">Taxa de Entrega</p>
+                                <p class="font-medium text-gray-700" id="pm-delivery-fee-text"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add to Cart Footer -->
+        <div class="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 sm:p-5 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] sm:rounded-b-2xl">
+            <div class="flex items-center gap-3 sm:gap-4 max-w-sm mx-auto sm:max-w-none">
+                <div class="flex items-center bg-gray-50 rounded-xl h-14 border border-gray-200">
+                    <button onclick="changePmQty(-1)" class="w-12 h-full flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-gray-100 rounded-l-xl transition-colors">
+                        <i data-lucide="minus" class="w-5 h-5"></i>
+                    </button>
+                    <span id="pm-qty" class="w-10 text-center font-bold text-gray-800 text-lg">1</span>
+                    <button onclick="changePmQty(1)" class="w-12 h-full flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-gray-100 rounded-r-xl transition-colors">
+                        <i data-lucide="plus" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <button id="pm-add-btn" onclick="addPmToCart()" class="flex-1 h-14 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold flex items-center justify-between px-5 shadow-lg shadow-red-500/30 transition-all active:scale-[0.98]">
+                    <span>Adicionar</span>
+                    <span id="pm-total" class="bg-white/20 px-3 py-1.5 rounded-lg text-sm tracking-wide"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const SLUG = '{{ slug }}';
+    let restaurantData = null;
+    let activeCategory = null;
+    let currentProduct = null;
+    let pmQuantity = 1;
+
+    function getImageUrl(url) {
+        if (!url) return '';
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        if (url.startsWith('/media/')) return url;
+        if (url.startsWith('media/')) return '/' + url;
+        return url;
+    }
+
+    async function loadRestaurant() {
+        try {
+            const detailRes = await fetch(`/api/restaurants/slug/${SLUG}/`);
+            if (!detailRes.ok) throw new Error('Not found');
+            restaurantData = await detailRes.json();
+        } catch (e) {
+            document.getElementById('products-grid').innerHTML = `
+                <div class="col-span-full text-center py-12">
+                    <div class="bg-white rounded-2xl p-8 max-w-sm mx-auto border border-gray-100 shadow-card">
+                        <i data-lucide="alert-circle" class="w-10 h-10 text-red-300 mx-auto mb-3"></i>
+                        <p class="text-red-500 font-medium mb-2">Restaurante não encontrado</p>
+                        <p class="text-gray-500 text-sm mb-4">Este restaurante pode estar indisponível.</p>
+                        <a href="/restaurantes/" class="btn-primary px-5 py-2 rounded-xl text-sm text-white font-medium inline-block">Ver Restaurantes</a>
+                    </div>
+                </div>`;
+            lucide.createIcons();
+            return;
+        }
+
+        const r = restaurantData;
+        document.getElementById('restaurant-name').textContent = r.name;
+        document.getElementById('restaurant-desc').textContent = r.description || '';
+        document.getElementById('restaurant-rating').textContent = (r.rating?.average || 0).toFixed(1);
+        document.getElementById('restaurant-reviews').textContent = `(${r.rating?.count || 0} avaliações)`;
+
+        const addr = r.address;
+        if (addr) { document.getElementById('restaurant-address').textContent = `${addr.neighborhood || ''}, ${addr.city || ''}`; }
+
+        const deliveryFee = r.delivery_fee > 0 ? formatMoney(r.delivery_fee) : 'Entrega Grátis';
+        document.getElementById('restaurant-delivery-fee').textContent = deliveryFee;
+
+        const coverUrl = getImageUrl(r.cover_image_url);
+        if (coverUrl) {
+            const container = document.getElementById('cover-container');
+            const img = new Image();
+            img.onload = () => { container.style.backgroundImage = `url(${coverUrl})`; container.style.backgroundSize = 'cover'; container.style.backgroundPosition = 'center'; document.getElementById('cover-fallback').style.display = 'none'; };
+            img.src = coverUrl;
+        }
+
+        const categories = { appetizer: '🥗 Entradas', main: '🍽️ Pratos', dessert: '🍰 Sobremesas', drink: '🥤 Bebidas', combo: '📦 Combos' };
+        const tabs = document.getElementById('category-tabs');
+        const availableCats = [...new Set((r.products || []).map(p => p.category))];
+        let tabsHtml = `<button onclick="filterProducts(null)" class="cat-tab whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium bg-red-500 text-white shadow-sm transition-all" data-cat="all">Todos (${(r.products || []).length})</button>`;
+        availableCats.forEach(cat => {
+            const count = (r.products || []).filter(p => p.category === cat).length;
+            tabsHtml += `<button onclick="filterProducts('${cat}')" class="cat-tab whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 transition-all" data-cat="${cat}">${categories[cat] || cat} (${count})</button>`;
+        });
+        tabs.innerHTML = tabsHtml;
+        renderProducts(r.products || []);
+    }
+
+    function filterProducts(category) {
+        activeCategory = category;
+        document.querySelectorAll('.cat-tab').forEach(b => {
+            const isActive = (category === null && b.dataset.cat === 'all') || b.dataset.cat === category;
+            if (isActive) { b.classList.add('bg-red-500', 'text-white', 'shadow-sm'); b.classList.remove('bg-white', 'text-gray-600', 'border', 'border-gray-200'); }
+            else { b.classList.remove('bg-red-500', 'text-white', 'shadow-sm'); b.classList.add('bg-white', 'text-gray-600', 'border', 'border-gray-200'); }
+        });
+        const products = restaurantData.products || [];
+        const filtered = category ? products.filter(p => p.category === category) : products;
+        renderProducts(filtered);
+    }
+
+    function renderProducts(products) {
+        const grid = document.getElementById('products-grid');
+        const empty = document.getElementById('products-empty');
+        const counter = document.getElementById('products-count');
+        if (products.length === 0) { grid.innerHTML = ''; empty.classList.remove('hidden'); counter.classList.add('hidden'); lucide.createIcons(); return; }
+        empty.classList.add('hidden'); counter.classList.remove('hidden');
+        document.getElementById('products-count-text').textContent = `${products.length} produto(s)`;
+        grid.innerHTML = products.map(p => {
+            const imgUrl = getImageUrl(p.image_url);
+            const priceFormatted = formatMoney(p.price || 0);
+            const pJson = JSON.stringify(p).replace(/"/g, '&quot;');
+            return `
+                <div class="product-card rounded-2xl overflow-hidden flex flex-col h-full fade-in cursor-pointer group" onclick="openProductModal(${pJson})">
+                    <div class="product-img h-48 bg-gray-100 relative overflow-hidden flex-shrink-0">
+                        ${imgUrl ? `<img src="${imgUrl}" alt="${p.name}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\\'product-fallback w-full h-full flex items-center justify-center\\'><i data-lucide=\\'image\\' class=\\'w-12 h-12 text-gray-300\\'></i></div>'; lucide.createIcons();">` : `<div class="product-fallback w-full h-full flex items-center justify-center"><i data-lucide="image" class="w-12 h-12 text-gray-300"></i></div>`}
+                        ${p.is_available === false ? '<div class="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center"><span class="px-4 py-1.5 bg-red-500 text-white text-xs font-bold rounded-lg uppercase tracking-wide">Esgotado</span></div>' : ''}
+                    </div>
+                    <div class="p-5 flex flex-col flex-grow relative">
+                        <h3 class="font-bold text-gray-800 text-lg mb-2 group-hover:text-red-500 transition-colors">${p.name}</h3>
+                        <p class="text-sm text-gray-500 line-clamp-3 mb-4 flex-grow">${p.description || ''}</p>
+                        <div class="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
+                            <span class="text-xl font-extrabold text-red-500">${priceFormatted}</span>
+                            <div class="w-10 h-10 rounded-full bg-red-50 text-red-500 flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-colors">
+                                <i data-lucide="plus" class="w-5 h-5"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+        }).join('');
+        lucide.createIcons();
+    }
+
+    // Modal Functions
+    function openProductModal(p) {
+        if (p.is_available === false) { showToast('Este produto está esgotado', 'warning'); return; }
+        
+        currentProduct = p;
+        pmQuantity = 1;
+        
+        // Populating basic data
+        document.getElementById('pm-name').textContent = p.name;
+        document.getElementById('pm-desc').textContent = p.description || 'Sem descrição detalhada.';
+        const cats = { appetizer: 'Entrada', main: 'Prato Principal', dessert: 'Sobremesa', drink: 'Bebida', combo: 'Combo' };
+        document.getElementById('pm-category').textContent = cats[p.category] || p.category;
+        
+        // Restaurant details
+        const r = restaurantData;
+        document.getElementById('pm-delivery-time').textContent = r.estimated_delivery_time || '40-50 min';
+        const deliveryFee = r.delivery_fee > 0 ? formatMoney(r.delivery_fee) : 'Entrega Grátis';
+        document.getElementById('pm-delivery-fee-text').textContent = deliveryFee;
+        document.getElementById('pm-rating').textContent = (r.rating?.average || 5.0).toFixed(1);
+        
+        // Images / Gallery
+        const gallery = document.getElementById('pm-gallery');
+        const mainImg = document.getElementById('pm-main-img');
+        const fallback = document.getElementById('pm-fallback');
+        
+        // Extract all unique image URLs
+        let allImages = [];
+        if (p.images && p.images.length > 0) allImages = p.images.map(getImageUrl).filter(Boolean);
+        else if (p.image_url) allImages = [getImageUrl(p.image_url)].filter(Boolean);
+        
+        gallery.innerHTML = '';
+        if (allImages.length > 0) {
+            mainImg.src = allImages[0];
+            mainImg.classList.remove('hidden');
+            fallback.classList.add('hidden');
+            
+            if (allImages.length > 1) {
+                allImages.forEach((url, i) => {
+                    gallery.innerHTML += `<img src="${url}" onclick="changePmImage('${url}', this)" class="gallery-thumb w-20 h-20 rounded-xl object-cover cursor-pointer flex-shrink-0 shadow-sm ${i === 0 ? 'active' : ''}">`;
+                });
+                gallery.classList.remove('hidden');
+            } else {
+                gallery.classList.add('hidden');
+            }
+        } else {
+            mainImg.classList.add('hidden');
+            fallback.classList.remove('hidden');
+            gallery.classList.add('hidden');
+        }
+
+        updatePmTotal();
+        
+        const modal = document.getElementById('product-modal');
+        const content = document.getElementById('product-modal-content');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        
+        // Trigger animation
+        requestAnimationFrame(() => {
+            modal.classList.add('active');
+            content.classList.add('active');
+        });
+        lucide.createIcons();
+    }
+
+    function changePmImage(url, el) {
+        const mainImg = document.getElementById('pm-main-img');
+        mainImg.style.opacity = '0.5';
+        setTimeout(() => {
+            mainImg.src = url;
+            mainImg.style.opacity = '1';
+        }, 150);
+        
+        document.querySelectorAll('.gallery-thumb').forEach(thumb => thumb.classList.remove('active'));
+        if(el) el.classList.add('active');
+    }
+
+    function closeProductModal() {
+        const modal = document.getElementById('product-modal');
+        const content = document.getElementById('product-modal-content');
+        modal.classList.remove('active');
+        content.classList.remove('active');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            currentProduct = null;
+        }, 300);
+    }
+
+    function changePmQty(delta) {
+        pmQuantity += delta;
+        if (pmQuantity < 1) pmQuantity = 1;
+        if (currentProduct.stock !== -1 && pmQuantity > currentProduct.stock) {
+            pmQuantity = currentProduct.stock;
+            showToast('Estoque máximo atingido', 'warning');
+        }
+        document.getElementById('pm-qty').textContent = pmQuantity;
+        updatePmTotal();
+    }
+
+    function updatePmTotal() {
+        if (!currentProduct) return;
+        const total = (currentProduct.price || 0) * pmQuantity;
+        document.getElementById('pm-total').textContent = formatMoney(total);
+        document.getElementById('pm-qty').textContent = pmQuantity;
+    }
+
+    function addPmToCart() {
+        if (!currentProduct) return;
+        // Adding with quantity to cart
+        for(let i=0; i<pmQuantity; i++) {
+            Cart.add(currentProduct, restaurantData.id, restaurantData.name);
+        }
+        closeProductModal();
+    }
+
+    function addToCart(product) { Cart.add(product, restaurantData.id, restaurantData.name); }
+    loadRestaurant();
+</script>
+{% endblock %}
