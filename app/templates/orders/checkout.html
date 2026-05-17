@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block title %}Checkout — Cardápio Online{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+        <i data-lucide="credit-card" class="w-6 h-6 text-red-500"></i> Finalizar Pedido
+    </h1>
+
+    <div class="flex flex-col lg:flex-row gap-8">
+        <div class="flex-1 space-y-6">
+            <form id="checkout-form" class="space-y-6">
+                <!-- Delivery Method -->
+                <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-card">
+                    <h2 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i data-lucide="truck" class="w-5 h-5 text-red-500"></i> Tipo de Entrega
+                    </h2>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="delivery_method" value="delivery" checked class="hidden peer" onchange="toggleAddressSection(); calculateTotals();">
+                            <div class="peer-checked:border-red-500 peer-checked:bg-red-50 border-2 border-gray-200 rounded-xl p-4 text-center transition-all h-full flex flex-col justify-center">
+                                <i data-lucide="bike" class="w-6 h-6 mx-auto mb-2 text-gray-400"></i>
+                                <span class="text-sm font-medium text-gray-700">Delivery</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="delivery_method" value="pickup" class="hidden peer" onchange="toggleAddressSection(); calculateTotals();">
+                            <div class="peer-checked:border-red-500 peer-checked:bg-red-50 border-2 border-gray-200 rounded-xl p-4 text-center transition-all h-full flex flex-col justify-center">
+                                <i data-lucide="store" class="w-6 h-6 mx-auto mb-2 text-gray-400"></i>
+                                <span class="text-sm font-medium text-gray-700">Retirada</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Address Section -->
+                <div id="address-section" class="bg-white rounded-2xl p-6 border border-gray-100 shadow-card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="font-semibold text-gray-800 flex items-center gap-2">
+                            <i data-lucide="map-pin" class="w-5 h-5 text-red-500"></i> Endereço de Entrega
+                        </h2>
+                        <a href="/enderecos/" target="_blank" class="text-xs text-red-500 hover:text-red-600 font-medium">Gerenciar</a>
+                    </div>
+                    <div id="addresses-container" class="space-y-3">
+                        <div class="animate-pulse flex space-x-4">
+                            <div class="flex-1 space-y-4 py-1">
+                                <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                                <div class="space-y-2"><div class="h-4 bg-gray-200 rounded"></div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Method -->
+                <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-card">
+                    <h2 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i data-lucide="wallet" class="w-5 h-5 text-red-500"></i> Forma de Pagamento
+                    </h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="payment_method" value="pix" checked class="hidden peer">
+                            <div class="peer-checked:border-red-500 peer-checked:bg-red-50 border-2 border-gray-200 rounded-xl p-4 text-center transition-all">
+                                <i data-lucide="qr-code" class="w-5 h-5 mx-auto mb-2 text-gray-400"></i>
+                                <span class="text-sm font-medium text-gray-700">PIX</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="payment_method" value="card" class="hidden peer">
+                            <div class="peer-checked:border-red-500 peer-checked:bg-red-50 border-2 border-gray-200 rounded-xl p-4 text-center transition-all">
+                                <i data-lucide="credit-card" class="w-5 h-5 mx-auto mb-2 text-gray-400"></i>
+                                <span class="text-sm font-medium text-gray-700">Cartão na Entrega</span>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="payment_method" value="cash" class="hidden peer">
+                            <div class="peer-checked:border-red-500 peer-checked:bg-red-50 border-2 border-gray-200 rounded-xl p-4 text-center transition-all">
+                                <i data-lucide="banknote" class="w-5 h-5 mx-auto mb-2 text-gray-400"></i>
+                                <span class="text-sm font-medium text-gray-700">Dinheiro</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-card">
+                    <h2 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i data-lucide="message-square" class="w-5 h-5 text-red-500"></i> Observações
+                    </h2>
+                    <textarea id="checkout-notes" rows="2" placeholder="Ex: Sem cebola, troco para R$ 50..." class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 placeholder-gray-400 outline-none focus:bg-white text-sm resize-none"></textarea>
+                </div>
+                
+                <button type="submit" id="checkout-btn" class="hidden"></button>
+            </form>
+        </div>
+
+        <!-- Sidebar Summary -->
+        <div class="w-full lg:w-96 flex-shrink-0">
+            <div class="bg-white rounded-2xl p-6 sticky top-24 border border-gray-100 shadow-card">
+                <h2 class="font-semibold text-gray-800 mb-4">Resumo do Pedido</h2>
+                <p class="text-sm text-gray-500 mb-4" id="restaurant-name-summary"></p>
+                
+                <div id="checkout-items" class="space-y-3 mb-4 max-h-60 overflow-y-auto pr-2"></div>
+                
+                <hr class="border-gray-100 my-4">
+                
+                <!-- Coupon -->
+                <div class="mb-4">
+                    <div class="flex gap-2">
+                        <input type="text" id="coupon-input" placeholder="Cupom de desconto" class="flex-1 px-4 py-2 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 placeholder-gray-400 outline-none text-sm uppercase">
+                        <button type="button" onclick="applyCoupon()" id="btn-apply-coupon" class="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors text-sm font-medium">Aplicar</button>
+                    </div>
+                    <div id="coupon-message" class="text-xs mt-2 hidden"></div>
+                </div>
+
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between text-gray-500">
+                        <span>Subtotal</span>
+                        <span id="summary-subtotal">R$ 0,00</span>
+                    </div>
+                    <div class="flex justify-between text-gray-500">
+                        <span>Taxa de entrega</span>
+                        <span id="summary-delivery-fee">R$ 0,00</span>
+                    </div>
+                    <div id="discount-row" class="flex justify-between text-emerald-500 hidden">
+                        <span>Desconto (<span id="discount-code"></span>)</span>
+                        <span id="summary-discount">- R$ 0,00</span>
+                    </div>
+                </div>
+                
+                <hr class="border-gray-100 my-4">
+                
+                <div class="flex items-center justify-between mb-6">
+                    <span class="text-lg font-semibold text-gray-800">Total</span>
+                    <span id="summary-total" class="text-2xl font-bold text-red-500">R$ 0,00</span>
+                </div>
+
+                <div id="checkout-error" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4"></div>
+                
+                <button type="button" onclick="document.getElementById('checkout-form').dispatchEvent(new Event('submit'))" id="btn-submit-proxy" class="w-full btn-primary py-4 rounded-xl text-white font-bold text-lg shadow-lg shadow-red-500/20">
+                    Confirmar Pedido
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    if (!Auth.isAuthenticated()) { 
+        window.location.href = '/login/?next=/checkout/'; 
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const checkoutRestaurantId = urlParams.get('restaurant_id');
+
+    if (!checkoutRestaurantId) {
+        window.location.href = '/carrinho/';
+    }
+
+    const cart = Cart.get();
+    const rests = Cart.getRestaurants();
+    const currentRest = rests.find(r => r.id === checkoutRestaurantId);
+
+    if (!currentRest || !currentRest.items || currentRest.items.length === 0) { 
+        window.location.href = '/carrinho/'; 
+    }
+
+    const checkoutItems = currentRest.items;
+
+    let userAddresses = [];
+    let restaurantInfo = null;
+    let appliedCoupon = null;
+    let deliveryFee = 0;
+    
+    const subtotal = Cart.getTotalByRestaurant(checkoutRestaurantId);
+
+    async function initCheckout() {
+        document.getElementById('restaurant-name-summary').textContent = currentRest.name;
+        
+        document.getElementById('checkout-items').innerHTML = checkoutItems.map(i => `
+            <div class="flex justify-between text-sm">
+                <div class="flex gap-2">
+                    <span class="text-gray-400 font-medium">${i.quantity}x</span>
+                    <span class="text-gray-700 line-clamp-1">${i.name}</span>
+                </div>
+                <span class="text-gray-500 flex-shrink-0">${formatMoney(i.price * i.quantity)}</span>
+            </div>
+        `).join('');
+
+        try {
+            const addrRes = await API.get('/api/auth/addresses/');
+            if (addrRes.ok) { userAddresses = await addrRes.json(); renderAddresses(); }
+            const restRes = await API.get(`/api/restaurants/${checkoutRestaurantId}/`);
+            if (restRes.ok) { restaurantInfo = await restRes.json(); deliveryFee = restaurantInfo.delivery_fee || 0; }
+        } catch (e) { console.error(e); }
+        calculateTotals();
+    }
+
+    function renderAddresses() {
+        const container = document.getElementById('addresses-container');
+        if (userAddresses.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-4 bg-gray-50 rounded-xl border border-gray-200">
+                    <p class="text-sm text-gray-500 mb-2">Nenhum endereço cadastrado.</p>
+                    <a href="/enderecos/" target="_blank" class="text-red-500 text-sm hover:underline font-medium">Cadastrar endereço</a>
+                </div>
+                <button type="button" onclick="loadAddressesOnly()" class="mt-2 text-xs text-gray-500 underline flex items-center gap-1"><i data-lucide="refresh-cw" class="w-3 h-3"></i> Atualizar lista</button>`;
+            return;
+        }
+        container.innerHTML = userAddresses.map((addr, idx) => `
+            <label class="flex items-start gap-3 cursor-pointer p-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors ${addr.is_default ? 'bg-red-50/30 border-red-200' : ''}">
+                <input type="radio" name="selected_address" value="${idx}" ${addr.is_default ? 'checked' : ''} class="mt-1 text-red-500 focus:ring-red-500 bg-white border-gray-300">
+                <div>
+                    <p class="text-sm font-medium text-gray-800">${addr.label || 'Endereço'}</p>
+                    <p class="text-xs text-gray-500">${addr.street}, ${addr.number} ${addr.complement ? ' - ' + addr.complement : ''}</p>
+                    <p class="text-xs text-gray-400">${addr.neighborhood}, ${addr.city}</p>
+                </div>
+            </label>
+        `).join('');
+        if (!userAddresses.some(a => a.is_default) && userAddresses.length > 0) { document.querySelector('input[name="selected_address"]').checked = true; }
+        lucide.createIcons();
+    }
+
+    async function loadAddressesOnly() {
+        try { const addrRes = await API.get('/api/auth/addresses/'); if (addrRes.ok) { userAddresses = await addrRes.json(); renderAddresses(); } } catch (e) {}
+    }
+
+    function toggleAddressSection() {
+        const method = document.querySelector('input[name="delivery_method"]:checked').value;
+        const section = document.getElementById('address-section');
+        if (method === 'delivery') { section.classList.remove('hidden'); } else { section.classList.add('hidden'); }
+    }
+
+    async function applyCoupon() {
+        const codeInput = document.getElementById('coupon-input');
+        const code = codeInput.value.trim();
+        const msgDiv = document.getElementById('coupon-message');
+        const btn = document.getElementById('btn-apply-coupon');
+        if (!code) return;
+        if (appliedCoupon && appliedCoupon.code === code.toUpperCase()) { appliedCoupon = null; codeInput.value = ''; btn.textContent = 'Aplicar'; msgDiv.classList.add('hidden'); calculateTotals(); return; }
+        btn.disabled = true; btn.textContent = '...';
+        try {
+            const res = await API.post('/api/orders/validate-coupon/', { restaurant_id: checkoutRestaurantId, code: code, cart_total: subtotal });
+            if (res.ok) { const data = await res.json(); appliedCoupon = data; msgDiv.textContent = `Cupom aplicado! Desconto de ${formatMoney(data.discount_amount)}`; msgDiv.className = 'text-xs mt-2 text-emerald-500'; btn.textContent = 'Remover'; }
+            else { const err = await res.json(); appliedCoupon = null; msgDiv.textContent = err.error || 'Cupom inválido.'; msgDiv.className = 'text-xs mt-2 text-red-500'; btn.textContent = 'Aplicar'; }
+            msgDiv.classList.remove('hidden'); calculateTotals();
+        } catch (e) { msgDiv.textContent = 'Erro ao validar cupom.'; msgDiv.className = 'text-xs mt-2 text-red-500'; msgDiv.classList.remove('hidden'); btn.textContent = 'Aplicar'; }
+        finally { btn.disabled = false; }
+    }
+
+    function calculateTotals() {
+        const method = document.querySelector('input[name="delivery_method"]:checked').value;
+        const currentDeliveryFee = method === 'delivery' ? deliveryFee : 0;
+        const discount = appliedCoupon ? appliedCoupon.discount_amount : 0;
+        const total = Math.max(0, subtotal - discount) + currentDeliveryFee;
+        document.getElementById('summary-subtotal').textContent = formatMoney(subtotal);
+        document.getElementById('summary-delivery-fee').textContent = formatMoney(currentDeliveryFee);
+        const discountRow = document.getElementById('discount-row');
+        if (discount > 0) { document.getElementById('discount-code').textContent = appliedCoupon.code; document.getElementById('summary-discount').textContent = `- ${formatMoney(discount)}`; discountRow.classList.remove('hidden'); }
+        else { discountRow.classList.add('hidden'); }
+        document.getElementById('summary-total').textContent = formatMoney(total);
+    }
+
+    document.getElementById('checkout-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-submit-proxy');
+        const errorDiv = document.getElementById('checkout-error');
+        const deliveryMethod = document.querySelector('input[name="delivery_method"]:checked').value;
+        const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
+        let deliveryAddress = undefined;
+        if (deliveryMethod === 'delivery') {
+            const selectedAddrInput = document.querySelector('input[name="selected_address"]:checked');
+            if (!selectedAddrInput) { errorDiv.textContent = 'Selecione um endereço para entrega.'; errorDiv.classList.remove('hidden'); return; }
+            const addrObj = userAddresses[parseInt(selectedAddrInput.value)];
+            deliveryAddress = { street: addrObj.street, number: addrObj.number, complement: addrObj.complement || '', neighborhood: addrObj.neighborhood, city: addrObj.city, state: addrObj.state, zip_code: addrObj.zip_code };
+        }
+        const payload = { restaurant_id: checkoutRestaurantId, items: checkoutItems.map(i => ({ product_id: i.product_id, quantity: i.quantity })), delivery_method: deliveryMethod, payment_method: paymentMethod, notes: document.getElementById('checkout-notes').value.trim(), coupon_code: appliedCoupon ? appliedCoupon.code : '' };
+        if (deliveryAddress) { payload.delivery_address = deliveryAddress; }
+        btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin mx-auto"></i>'; btn.disabled = true; errorDiv.classList.add('hidden');
+        try {
+            const res = await API.post('/api/orders/', payload);
+            const data = await res.json();
+            if (res.ok) { checkoutItems.forEach(i => Cart.remove(i.product_id)); window.location.href = `/pedido/${data.order_number}/`; }
+            else { errorDiv.textContent = data.error || 'Erro ao criar pedido. Verifique os dados.'; errorDiv.classList.remove('hidden'); btn.textContent = 'Confirmar Pedido'; btn.disabled = false; }
+        } catch (err) { errorDiv.textContent = 'Erro de conexão.'; errorDiv.classList.remove('hidden'); btn.textContent = 'Confirmar Pedido'; btn.disabled = false; }
+    });
+
+    initCheckout();
+</script>
+{% endblock %}

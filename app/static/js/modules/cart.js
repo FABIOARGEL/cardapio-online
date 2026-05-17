@@ -1,0 +1,85 @@
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Cart Manager
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const Cart = {
+    KEY: 'cart_v2', // Changed key to avoid conflicts with old cart
+    
+    get() { 
+        const c = localStorage.getItem(this.KEY); 
+        return c ? JSON.parse(c) : { items: [] }; 
+    },
+    
+    save(cart) { 
+        localStorage.setItem(this.KEY, JSON.stringify(cart)); 
+        this.updateBadge(); 
+    },
+    
+    add(product, restaurantId, restaurantName) {
+        let cart = this.get();
+        const existing = cart.items.find(i => i.product_id === product.id);
+        if (existing) { 
+            existing.quantity = Math.min(99, existing.quantity + 1); 
+        } else { 
+            cart.items.push({ 
+                product_id: product.id, 
+                name: product.name, 
+                price: product.price, 
+                image_url: product.image_url, 
+                quantity: 1,
+                restaurant_id: restaurantId,
+                restaurant_name: restaurantName
+            }); 
+        }
+        this.save(cart);
+        showToast(`${product.name} adicionado ao carrinho!`);
+    },
+    
+    updateQuantity(productId, qty) {
+        const cart = this.get();
+        const item = cart.items.find(i => i.product_id === productId);
+        if (item) { item.quantity = Math.max(1, Math.min(99, qty)); }
+        this.save(cart);
+    },
+    
+    remove(productId) {
+        const cart = this.get();
+        cart.items = cart.items.filter(i => i.product_id !== productId);
+        this.save(cart);
+    },
+    
+    clear() { this.save({ items: [] }); },
+    
+    getTotal() { 
+        const cart = this.get(); 
+        return cart.items.reduce((t, i) => t + i.price * i.quantity, 0); 
+    },
+    
+    getTotalByRestaurant(restaurantId) { 
+        const cart = this.get(); 
+        return cart.items.filter(i => i.restaurant_id === restaurantId).reduce((t, i) => t + i.price * i.quantity, 0); 
+    },
+    
+    getCount() { 
+        const cart = this.get(); 
+        return cart.items.reduce((t, i) => t + i.quantity, 0); 
+    },
+    
+    getRestaurants() { 
+        const cart = this.get();
+        const rests = {};
+        cart.items.forEach(i => {
+            if (!rests[i.restaurant_id]) rests[i.restaurant_id] = { id: i.restaurant_id, name: i.restaurant_name, items: [] };
+            rests[i.restaurant_id].items.push(i);
+        });
+        return Object.values(rests);
+    },
+    
+    updateBadge() {
+        const badge = document.getElementById('cart-badge');
+        const count = this.getCount();
+        if (badge) { badge.textContent = count; badge.classList.toggle('hidden', count === 0); }
+    }
+};
+
+// Attach to window for inline scripts compatibility
+window.Cart = Cart;

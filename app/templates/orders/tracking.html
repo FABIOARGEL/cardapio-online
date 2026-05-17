@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Acompanhar Pedido — Cardápio Online{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold text-gray-800 mb-2">Acompanhar Pedido</h1>
+    <p class="text-gray-500 text-sm mb-8">Pedido <span class="text-red-500 font-semibold">{{ order_number }}</span></p>
+
+    <!-- Status Timeline -->
+    <div class="bg-white rounded-2xl p-6 mb-6 border border-gray-100 shadow-card">
+        <div id="status-timeline" class="space-y-6">
+            <div class="flex items-start gap-4" data-status="pending">
+                <div class="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0 shadow-sm"><i data-lucide="clock" class="w-5 h-5 text-white"></i></div>
+                <div><h3 class="font-medium text-gray-800">Pendente</h3><p class="text-xs text-gray-500">Aguardando confirmação do restaurante</p></div>
+            </div>
+            <div class="flex items-start gap-4 opacity-40" data-status="confirmed">
+                <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0"><i data-lucide="check" class="w-5 h-5 text-gray-400"></i></div>
+                <div><h3 class="font-medium text-gray-500">Confirmado</h3><p class="text-xs text-gray-400">Restaurante confirmou seu pedido</p></div>
+            </div>
+            <div class="flex items-start gap-4 opacity-40" data-status="preparing">
+                <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0"><i data-lucide="chef-hat" class="w-5 h-5 text-gray-400"></i></div>
+                <div><h3 class="font-medium text-gray-500">Preparando</h3><p class="text-xs text-gray-400">Seu pedido está sendo preparado</p></div>
+            </div>
+            <div class="flex items-start gap-4 opacity-40" data-status="ready">
+                <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0"><i data-lucide="package-check" class="w-5 h-5 text-gray-400"></i></div>
+                <div><h3 class="font-medium text-gray-500">Pronto</h3><p class="text-xs text-gray-400">Pedido pronto para retirada/entrega</p></div>
+            </div>
+            <div class="flex items-start gap-4 opacity-40" data-status="delivered">
+                <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0"><i data-lucide="circle-check-big" class="w-5 h-5 text-gray-400"></i></div>
+                <div><h3 class="font-medium text-gray-500">Entregue</h3><p class="text-xs text-gray-400">Pedido finalizado</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Details -->
+    <div id="order-details" class="bg-white rounded-2xl p-6 border border-gray-100 shadow-card">
+        <h2 class="font-semibold text-gray-800 mb-4">Detalhes do Pedido</h2>
+        <div id="order-items" class="space-y-3"></div>
+        <hr class="border-gray-100 my-4">
+        <div class="flex justify-between"><span class="font-semibold text-gray-800">Total</span><span id="order-total" class="text-xl font-bold text-red-500"></span></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const ORDER_NUMBER = '{{ order_number }}';
+    const statusOrder = ['pending', 'confirmed', 'preparing', 'ready', 'delivered'];
+    const statusColors = { pending: 'bg-amber-500', confirmed: 'bg-blue-500', preparing: 'bg-violet-500', ready: 'bg-emerald-500', delivered: 'bg-emerald-600', cancelled: 'bg-red-500' };
+
+    function updateTimeline(currentStatus) {
+        const idx = statusOrder.indexOf(currentStatus);
+        statusOrder.forEach((s, i) => {
+            const el = document.querySelector(`[data-status="${s}"]`);
+            if (!el) return;
+            if (i <= idx) { el.classList.remove('opacity-40'); el.querySelector('.rounded-full').className = `w-10 h-10 rounded-full ${statusColors[s]} flex items-center justify-center flex-shrink-0 shadow-sm`; el.querySelector('h3').className = 'font-medium text-gray-800'; }
+            else { el.classList.add('opacity-40'); }
+        });
+    }
+
+    async function loadOrder() {
+        try {
+            const res = await API.get(`/api/orders/`);
+            const data = await res.json();
+            const order = data.results?.find(o => o.order_number === ORDER_NUMBER);
+            if (!order) return;
+            updateTimeline(order.status);
+            document.getElementById('order-items').innerHTML = order.items.map(i => `
+                <div class="flex justify-between text-sm"><span class="text-gray-700">${i.quantity}x ${i.name}</span><span class="text-gray-500">${formatMoney(i.subtotal)}</span></div>
+            `).join('');
+            document.getElementById('order-total').textContent = formatMoney(order.total);
+            if (order.status !== 'delivered' && order.status !== 'cancelled') {
+                const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const token = Auth.getToken();
+                const ws = new WebSocket(`${protocol}//${location.host}/ws/orders/${order.id}/status/?token=${token}`);
+                ws.onmessage = (e) => { const msg = JSON.parse(e.data); if (msg.type === 'status_update') { updateTimeline(msg.data.status); showToast(`Pedido atualizado: ${msg.data.status}`); } };
+            }
+        } catch {}
+    }
+    loadOrder();
+</script>
+{% endblock %}
