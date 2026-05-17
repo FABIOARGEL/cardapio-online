@@ -1,0 +1,63 @@
+<!-- Navbar -->
+<nav class="bg-white sticky top-0 z-40 shadow-nav border-b border-gray-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+            <!-- Logo -->
+            <a href="/" class="flex items-center gap-2.5 group">
+                
+                <span class="text-xl font-bold gradient-text">Cardápio</span>
+            </a>
+
+            <!-- Center Nav -->
+            <div id="nav-center-links" class="hidden md:flex items-center gap-1">
+                <a href="/" class="text-sm font-medium text-gray-600 hover:text-red-500 px-4 py-2 rounded-xl hover:bg-red-50 transition-all">Início</a>
+                <a href="/restaurantes/" class="text-sm font-medium text-gray-600 hover:text-red-500 px-4 py-2 rounded-xl hover:bg-red-50 transition-all">Restaurantes</a>
+                <a href="/meus-pedidos/" id="nav-orders-header" class="hidden text-sm font-medium text-gray-600 hover:text-red-500 px-4 py-2 rounded-xl hover:bg-red-50 transition-all">Meus Pedidos</a>
+            </div>
+
+            <!-- Right Side -->
+            <div class="flex items-center gap-2">
+                <!-- Cart -->
+                <a href="/carrinho/" class="relative p-2.5 rounded-xl hover:bg-gray-50 transition-colors group" id="nav-cart">
+                    <i data-lucide="shopping-bag" class="w-5 h-5 text-gray-500 group-hover:text-red-500 transition-colors"></i>
+                    <span id="cart-badge" class="hidden absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm">0</span>
+                </a>
+
+                <!-- Auth Buttons (not logged in) -->
+                <div id="auth-buttons" class="flex items-center gap-2">
+                    <a href="/login/" class="text-sm font-medium text-gray-600 hover:text-red-500 px-4 py-2 rounded-xl transition-colors">Entrar</a>
+                    <a href="/cadastro/" class="btn-primary text-sm text-white px-5 py-2.5 rounded-xl font-semibold">Cadastrar</a>
+                </div>
+
+                <!-- User Menu (logged in) -->
+                <div id="user-menu" class="hidden flex items-center gap-3">
+                    <div class="relative group">
+                        <button class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-sm">
+                                <i data-lucide="user" class="w-4 h-4 text-white"></i>
+                            </div>
+                            <span id="user-name" class="text-sm font-medium text-gray-700 hidden sm:block"></span>
+                            <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400"></i>
+                        </button>
+                        <!-- Dropdown -->
+                        <div class="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 py-2">
+                            <a href="/perfil/" id="nav-profile" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:text-red-500 hover:bg-red-50/60 transition-colors">
+                                <i data-lucide="user" class="w-4 h-4"></i> Meu Perfil
+                            </a>
+                            <a href="/meus-pedidos/" id="nav-orders" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:text-red-500 hover:bg-red-50/60 transition-colors">
+                                <i data-lucide="receipt" class="w-4 h-4"></i> Meus Pedidos
+                            </a>
+                            <a href="/dashboard/" id="nav-dashboard" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:text-red-500 hover:bg-red-50/60 transition-colors">
+                                <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
+                            </a>
+                            <hr class="border-gray-100 my-1">
+                            <button onclick="Auth.logout()" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50/60 transition-colors">
+                                <i data-lucide="log-out" class="w-4 h-4"></i> Sair
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
