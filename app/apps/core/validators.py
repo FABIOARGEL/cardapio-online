@@ -54,24 +54,24 @@ class CouponValidator:
         if not code:
             return Decimal('0.00'), ''
 
-        coupon = next((c for c in coupons if c.code == code and c.is_active), None)
+        coupon = next((c for c in coupons if c.codigo == code and c.esta_ativo), None)
         if not coupon:
             raise InvalidCouponError()
 
-        if coupon.valid_until and coupon.valid_until < datetime.now(timezone.utc):
+        if coupon.valido_ate and coupon.valido_ate < datetime.now(timezone.utc):
             raise CouponExpiredError()
 
-        if coupon.min_order and cart_total < Decimal(str(coupon.min_order)):
-            raise CouponMinOrderError(float(coupon.min_order))
+        if coupon.pedido_minimo and cart_total < Decimal(str(coupon.pedido_minimo)):
+            raise CouponMinOrderError(float(coupon.pedido_minimo))
 
-        if coupon.max_uses > 0 and coupon.used_count >= coupon.max_uses:
+        if coupon.max_usos > 0 and coupon.contagem_usos >= coupon.max_usos:
             raise CouponExhaustedError()
 
         # Calculate discount
-        if coupon.discount_type == 'percentage':
-            discount = cart_total * (Decimal(str(coupon.discount_value)) / Decimal('100.0'))
+        if coupon.tipo_desconto == 'porcentagem':
+            discount = cart_total * (Decimal(str(coupon.valor_desconto)) / Decimal('100.0'))
         else:
-            discount = Decimal(str(coupon.discount_value))
+            discount = Decimal(str(coupon.valor_desconto))
 
         # Cap discount at cart total
         discount = min(discount, cart_total)

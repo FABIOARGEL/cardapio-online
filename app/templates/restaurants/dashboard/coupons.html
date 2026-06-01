@@ -123,7 +123,7 @@
                         <div class="flex items-start justify-between mb-3">
                             <div>
                                 <div class="flex items-center gap-2 mb-1">
-                                    <span class="text-lg font-bold text-red-500 font-mono">${c.code}</span>
+                                    <span class="text-lg font-bold text-red-500 font-mono">${c.codigo}</span>
                                     ${statusBadge}
                                 </div>
                                 <p class="text-xs text-gray-400">${c.descricao || 'Sem descrição'}</p>
@@ -139,7 +139,7 @@
                                 <span class="text-gray-600 font-medium">${c.tipo_desconto === 'porcentagem' ? c.valor_desconto + '%' : formatMoney(c.valor_desconto)}</span>
                             </div>
                             ${c.pedido_minimo > 0 ? `<span class="text-xs text-gray-400">Min: ${formatMoney(c.pedido_minimo)}</span>` : ''}
-                            ${c.max_usos > 0 ? `<span class="text-xs text-gray-400">${c.used_count}/${c.max_usos} usos</span>` : '<span class="text-xs text-gray-400">Uso ilimitado</span>'}
+                            ${c.max_usos > 0 ? `<span class="text-xs text-gray-400">${c.contagem_usos}/${c.max_usos} usos</span>` : '<span class="text-xs text-gray-400">Uso ilimitado</span>'}
                         </div>
                         ${c.valido_ate ? `<p class="text-xs text-gray-400 mt-2">Até: ${new Date(c.valido_ate).toLocaleDateString('pt-BR')}</p>` : ''}
                     </div>
@@ -152,7 +152,7 @@
     function openCouponModal(coupon = null) {
         document.getElementById('coupon-modal-title').textContent = coupon ? 'Editar Cupom' : 'Novo Cupom';
         document.getElementById('cf-id').value = coupon ? coupon.id : '';
-        document.getElementById('cf-code').value = coupon ? coupon.code : '';
+        document.getElementById('cf-code').value = coupon ? coupon.codigo : '';
         document.getElementById('cf-code').disabled = !!coupon;
         document.getElementById('cf-desc').value = coupon ? (coupon.descricao || '') : '';
         document.getElementById('cf-type').value = coupon ? coupon.tipo_desconto : 'porcentagem';
@@ -213,7 +213,9 @@
                 closeCouponModal();
                 loadCoupons();
             } else {
-                errDiv.textContent = result.error || 'Erro ao salvar.';
+                let msg = result.error || 'Erro ao salvar.';
+                if (result.details) msg += ': ' + JSON.stringify(result.details);
+                errDiv.textContent = msg;
                 errDiv.classList.remove('hidden');
             }
         } catch {

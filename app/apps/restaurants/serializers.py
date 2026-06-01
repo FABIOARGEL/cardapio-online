@@ -30,7 +30,7 @@ class BusinessHourSerializer(serializers.Serializer):
 class CreateRestaurantSerializer(serializers.Serializer):
     """Valida criação de restaurante."""
     nome = serializers.CharField(max_length=100)
-    descricao = serializers.CharField(max_length=500, required=False, default='')
+    descricao = serializers.CharField(max_length=500, required=False, allow_blank=True, default='')
     contato = ContactSerializer(required=False)
     endereco = AddressSerializer(required=False)
     horarios_funcionamento = BusinessHourSerializer(many=True, required=False, default=list)
@@ -45,7 +45,7 @@ class CreateRestaurantSerializer(serializers.Serializer):
 class UpdateRestaurantSerializer(serializers.Serializer):
     """Valida atualização de restaurante."""
     nome = serializers.CharField(max_length=100, required=False)
-    descricao = serializers.CharField(max_length=500, required=False)
+    descricao = serializers.CharField(max_length=500, required=False, allow_blank=True)
     contato = ContactSerializer(required=False)
     endereco = AddressSerializer(required=False)
     horarios_funcionamento = BusinessHourSerializer(many=True, required=False)
@@ -61,7 +61,7 @@ class UpdateRestaurantSerializer(serializers.Serializer):
 class CreateProductSerializer(serializers.Serializer):
     """Valida criação de produto."""
     nome = serializers.CharField(max_length=100)
-    descricao = serializers.CharField(max_length=500, required=False, default='')
+    descricao = serializers.CharField(max_length=500, required=False, allow_blank=True, default='')
     preco = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
     categoria = serializers.ChoiceField(
         choices=['entrada', 'principal', 'sobremesa', 'bebida', 'combo']
@@ -74,7 +74,7 @@ class CreateProductSerializer(serializers.Serializer):
 class UpdateProductSerializer(serializers.Serializer):
     """Valida atualização de produto."""
     nome = serializers.CharField(max_length=100, required=False)
-    descricao = serializers.CharField(max_length=500, required=False)
+    descricao = serializers.CharField(max_length=500, required=False, allow_blank=True)
     preco = serializers.DecimalField(
         max_digits=10, decimal_places=2, min_value=0.01, required=False
     )
@@ -90,7 +90,7 @@ class UpdateProductSerializer(serializers.Serializer):
 class CreateCouponSerializer(serializers.Serializer):
     """Valida criação de cupom."""
     codigo = serializers.CharField(max_length=30)
-    descricao = serializers.CharField(max_length=200, required=False, default='')
+    descricao = serializers.CharField(max_length=200, required=False, allow_blank=True, default='')
     tipo_desconto = serializers.ChoiceField(choices=['porcentagem', 'fixo'])
     valor_desconto = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
     pedido_minimo = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0, default=0, required=False)
@@ -101,7 +101,7 @@ class CreateCouponSerializer(serializers.Serializer):
 
 class UpdateCouponSerializer(serializers.Serializer):
     """Valida atualização de cupom."""
-    descricao = serializers.CharField(max_length=200, required=False)
+    descricao = serializers.CharField(max_length=200, required=False, allow_blank=True)
     tipo_desconto = serializers.ChoiceField(choices=['porcentagem', 'fixo'], required=False)
     valor_desconto = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01, required=False)
     pedido_minimo = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0, required=False)
