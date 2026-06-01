@@ -1,13 +1,5 @@
 """
 Authentication API views.
-
-Endpoints:
-- POST /api/auth/register/    → Register new user
-- POST /api/auth/login/       → Login with email/password
-- POST /api/auth/google/      → Login/register via Google OAuth
-- POST /api/auth/refresh/     → Refresh access token
-- POST /api/auth/logout/      → Logout (client-side token discard)
-- GET  /api/auth/me/          → Get current user profile
 """
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -106,12 +98,6 @@ class TokenRefreshView(APIView):
 
 
 class LogoutView(APIView):
-    """
-    POST /api/auth/logout/ — Logout user.
-
-    Since we use stateless JWT, logout is handled client-side
-    by discarding the token. This endpoint exists for API completeness.
-    """
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
@@ -123,7 +109,6 @@ class LogoutView(APIView):
 
 
 class MeView(APIView):
-    """GET /api/auth/me/ — Get current authenticated user's profile."""
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
@@ -157,8 +142,8 @@ class PasswordUpdateView(APIView):
         try:
             service.update_password(
                 str(request.user.id),
-                serializer.validated_data['current_password'],
-                serializer.validated_data['new_password']
+                serializer.validated_data['senha_atual'],
+                serializer.validated_data['nova_senha']
             )
         except ValueError as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -170,7 +155,7 @@ class AddressListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response(request.user.to_dict().get('addresses', []))
+        return Response(request.user.to_dict().get('enderecos', []))
 
     def post(self, request):
         serializer = AddressSerializer(data=request.data)
@@ -194,4 +179,3 @@ class AddressDetailView(APIView):
         except ValueError as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(status=status.HTTP_204_NO_CONTENT)
-

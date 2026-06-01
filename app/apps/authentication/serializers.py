@@ -1,38 +1,36 @@
 """
-Authentication serializers for DRF.
-
-Handles validation of registration, login, and token data.
+Serializadores de Autenticação para o DRF.
 """
 from rest_framework import serializers
 
 
 class RegisterSerializer(serializers.Serializer):
-    """Validate user registration data."""
-    name = serializers.CharField(min_length=2, max_length=100)
+    """Valida dados de cadastro de usuário."""
+    nome = serializers.CharField(min_length=2, max_length=100)
     email = serializers.EmailField()
-    password = serializers.CharField(min_length=8, write_only=True)
-    role = serializers.ChoiceField(choices=['customer', 'owner'], default='customer')
+    senha = serializers.CharField(min_length=8, write_only=True)
+    papel = serializers.ChoiceField(choices=['cliente', 'dono'], default='cliente')
 
     def validate_email(self, value):
         return value.lower().strip()
 
 
 class LoginSerializer(serializers.Serializer):
-    """Validate login credentials."""
+    """Valida credenciais de login."""
     email = serializers.EmailField()
-    password = serializers.CharField(write_only=True)
+    senha = serializers.CharField(write_only=True)
 
     def validate_email(self, value):
         return value.lower().strip()
 
 
 class GoogleOAuthSerializer(serializers.Serializer):
-    """Validate Google OAuth callback data."""
+    """Valida dados do callback do Google OAuth."""
     code = serializers.CharField(required=False)
     credential = serializers.CharField(required=False)
-    role = serializers.ChoiceField(
-        choices=['customer', 'owner'],
-        default='customer',
+    papel = serializers.ChoiceField(
+        choices=['cliente', 'dono'],
+        default='cliente',
         required=False,
     )
 
@@ -45,42 +43,42 @@ class GoogleOAuthSerializer(serializers.Serializer):
 
 
 class TokenRefreshSerializer(serializers.Serializer):
-    """Validate token refresh request."""
+    """Valida requisição de refresh token."""
     refresh_token = serializers.CharField()
 
 
 class UserResponseSerializer(serializers.Serializer):
-    """Serialize user data for API responses."""
+    """Serializa dados do usuário para respostas."""
     id = serializers.CharField()
     email = serializers.EmailField()
-    name = serializers.CharField()
-    phone = serializers.CharField(allow_null=True)
-    role = serializers.CharField()
+    nome = serializers.CharField()
+    telefone = serializers.CharField(allow_null=True)
+    papel = serializers.CharField()
     avatar_url = serializers.CharField(allow_null=True)
-    is_active = serializers.BooleanField()
-    created_at = serializers.DateTimeField()
+    esta_ativo = serializers.BooleanField()
+    criado_em = serializers.DateTimeField()
 
 
 class UpdateProfileSerializer(serializers.Serializer):
-    """Validate profile update data."""
-    name = serializers.CharField(min_length=2, max_length=100, required=False)
-    phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    """Valida dados de atualização de perfil."""
+    nome = serializers.CharField(min_length=2, max_length=100, required=False)
+    telefone = serializers.CharField(max_length=20, required=False, allow_blank=True)
 
 
 class UpdatePasswordSerializer(serializers.Serializer):
-    """Validate password update data."""
-    current_password = serializers.CharField(write_only=True)
-    new_password = serializers.CharField(min_length=8, write_only=True)
+    """Valida dados de atualização de senha."""
+    senha_atual = serializers.CharField(write_only=True)
+    nova_senha = serializers.CharField(min_length=8, write_only=True)
 
 
 class AddressSerializer(serializers.Serializer):
-    """Validate address data."""
-    label = serializers.CharField(max_length=50, required=False, default='Casa')
-    street = serializers.CharField(max_length=200)
-    number = serializers.CharField(max_length=20)
-    complement = serializers.CharField(max_length=100, required=False, allow_blank=True)
-    neighborhood = serializers.CharField(max_length=100)
-    city = serializers.CharField(max_length=100)
-    state = serializers.CharField(max_length=2)
-    zip_code = serializers.CharField(max_length=10)
-    is_default = serializers.BooleanField(required=False, default=False)
+    """Valida dados de endereço."""
+    rotulo = serializers.CharField(max_length=50, required=False, default='Casa')
+    rua = serializers.CharField(max_length=200)
+    numero = serializers.CharField(max_length=20)
+    complemento = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    bairro = serializers.CharField(max_length=100)
+    cidade = serializers.CharField(max_length=100)
+    estado = serializers.CharField(max_length=2)
+    cep = serializers.CharField(max_length=10)
+    padrao = serializers.BooleanField(required=False, default=False)

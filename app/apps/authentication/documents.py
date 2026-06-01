@@ -1,106 +1,106 @@
 """
-MongoEngine Documents for User collection.
+Documentos MongoEngine para a coleção de Usuários.
 
-Schema matches doc 06-modelagem-mongodb.md:
-- email (unique, indexed)
-- password_hash
-- name
-- phone
-- role (customer | owner)
+Schema conforme doc 06-modelagem-mongodb.md:
+- email (único, indexado)
+- senha_hash
+- nome
+- telefone
+- papel (cliente | dono)
 - avatar_url
-- google_id (unique, sparse)
-- addresses (embedded list)
-- is_active
-- created_at / updated_at
+- google_id (único, sparse)
+- enderecos (lista embarcada)
+- esta_ativo
+- criado_em / atualizado_em
 """
 from datetime import datetime, timezone
 
 import mongoengine as me
 
 
-class Address(me.EmbeddedDocument):
-    """Embedded document for user addresses."""
-    label = me.StringField(max_length=50, default='Casa')
-    street = me.StringField(max_length=200, required=True)
-    number = me.StringField(max_length=20, required=True)
-    complement = me.StringField(max_length=100)
-    neighborhood = me.StringField(max_length=100, required=True)
-    city = me.StringField(max_length=100, required=True)
-    state = me.StringField(max_length=2, required=True)
-    zip_code = me.StringField(max_length=10, required=True)
-    is_default = me.BooleanField(default=False)
+class Endereco(me.EmbeddedDocument):
+    """Documento embarcado para endereços do usuário."""
+    rotulo = me.StringField(max_length=50, default='Casa')
+    rua = me.StringField(max_length=200, required=True)
+    numero = me.StringField(max_length=20, required=True)
+    complemento = me.StringField(max_length=100)
+    bairro = me.StringField(max_length=100, required=True)
+    cidade = me.StringField(max_length=100, required=True)
+    estado = me.StringField(max_length=2, required=True)
+    cep = me.StringField(max_length=10, required=True)
+    padrao = me.BooleanField(default=False)
 
     meta = {'strict': False}
 
 
-class User(me.Document):
+class Usuario(me.Document):
     """
-    User document stored in MongoDB 'users' collection.
+    Documento de usuário armazenado na coleção MongoDB 'usuarios'.
 
-    Supports two types of users:
-    - customer: end-user who browses and orders
-    - owner: restaurant owner who manages restaurants and products
+    Suporta dois tipos de usuários:
+    - cliente: usuário final que navega e faz pedidos
+    - dono: dono de restaurante que gerencia restaurantes e produtos
     """
-    ROLE_CHOICES = ('customer', 'owner')
+    OPCOES_PAPEL = ('cliente', 'dono')
 
     email = me.EmailField(required=True, unique=True)
-    password_hash = me.StringField()
-    name = me.StringField(required=True, min_length=2, max_length=100)
-    phone = me.StringField(max_length=20)
-    role = me.StringField(required=True, choices=ROLE_CHOICES, default='customer')
+    senha_hash = me.StringField()
+    nome = me.StringField(required=True, min_length=2, max_length=100)
+    telefone = me.StringField(max_length=20)
+    papel = me.StringField(required=True, choices=OPCOES_PAPEL, default='cliente')
     avatar_url = me.StringField()
     google_id = me.StringField(unique=True, sparse=True)
-    addresses = me.EmbeddedDocumentListField(Address, default=list)
-    is_active = me.BooleanField(default=True)
+    enderecos = me.EmbeddedDocumentListField(Endereco, default=list)
+    esta_ativo = me.BooleanField(default=True)
 
-    # Login attempt tracking for account lockout
-    failed_login_attempts = me.IntField(default=0)
-    locked_until = me.DateTimeField()
+    # Rastreamento de tentativas de login para bloqueio de conta
+    tentativas_login_falhas = me.IntField(default=0)
+    bloqueado_ate = me.DateTimeField()
 
-    created_at = me.DateTimeField(default=lambda: datetime.now(timezone.utc))
-    updated_at = me.DateTimeField(default=lambda: datetime.now(timezone.utc))
+    criado_em = me.DateTimeField(default=lambda: datetime.now(timezone.utc))
+    atualizado_em = me.DateTimeField(default=lambda: datetime.now(timezone.utc))
 
     meta = {
-        'collection': 'users',
+        'collection': 'usuarios',
         'indexes': [
             {'fields': ['email'], 'unique': True},
             {'fields': ['google_id'], 'unique': True, 'sparse': True},
-            {'fields': ['role']},
+            {'fields': ['papel']},
         ],
-        'ordering': ['-created_at'],
+        'ordering': ['-criado_em'],
         'strict': False,
     }
 
     def save(self, *args, **kwargs):
-        self.updated_at = datetime.now(timezone.utc)
+        self.atualizado_em = datetime.now(timezone.utc)
         return super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.name} ({self.email})"
+        return f"{self.nome} ({self.email})"
 
     def to_dict(self) -> dict:
-        """Convert user to a safe dictionary (without password_hash)."""
+        """Converte usuário para dicionário seguro (sem senha_hash)."""
         return {
             'id': str(self.id),
             'email': self.email,
-            'name': self.name,
-            'phone': self.phone,
-            'role': self.role,
+            'nome': self.nome,
+            'telefone': self.telefone,
+            'papel': self.papel,
             'avatar_url': self.avatar_url,
-            'addresses': [
+            'enderecos': [
                 {
-                    'label': addr.label,
-                    'street': addr.street,
-                    'number': addr.number,
-                    'complement': addr.complement,
-                    'neighborhood': addr.neighborhood,
-                    'city': addr.city,
-                    'state': addr.state,
-                    'zip_code': addr.zip_code,
-                    'is_default': addr.is_default,
+                    'rotulo': addr.rotulo,
+                    'rua': addr.rua,
+                    'numero': addr.numero,
+                    'complemento': addr.complemento,
+                    'bairro': addr.bairro,
+                    'cidade': addr.cidade,
+                    'estado': addr.estado,
+                    'cep': addr.cep,
+                    'padrao': addr.padrao,
                 }
-                for addr in self.addresses
+                for addr in self.enderecos
             ],
-            'is_active': self.is_active,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'esta_ativo': self.esta_ativo,
+            'criado_em': self.criado_em.isoformat() if self.criado_em else None,
         }

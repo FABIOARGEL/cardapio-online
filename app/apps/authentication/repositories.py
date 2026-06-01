@@ -1,5 +1,5 @@
 """
-User repository — centralized database access for User documents.
+Repositório de Usuários — acesso centralizado ao banco para documentos Usuario.
 """
 from __future__ import annotations
 
@@ -7,46 +7,46 @@ import logging
 
 from bson import ObjectId
 
-from apps.authentication.documents import User
+from apps.authentication.documents import Usuario
 from apps.core.base_repository import BaseRepository
 
 logger = logging.getLogger(__name__)
 
 
-class UserRepository(BaseRepository[User]):
-    """Repository for User document queries."""
+class RepositorioUsuario(BaseRepository[Usuario]):
+    """Repositório para consultas no documento Usuario."""
 
-    document_class = User
+    document_class = Usuario
 
-    def find_by_email(self, email: str) -> User | None:
-        """Find a user by email (case-insensitive)."""
+    def buscar_por_email(self, email: str) -> Usuario | None:
+        """Busca um usuário por email (case-insensitive)."""
         return self.find_one(email=email.lower().strip())
 
-    def find_by_google_id(self, google_id: str) -> User | None:
-        """Find a user by Google OAuth ID."""
+    def buscar_por_google_id(self, google_id: str) -> Usuario | None:
+        """Busca um usuário pelo ID do Google OAuth."""
         return self.find_one(google_id=google_id)
 
-    def email_exists(self, email: str) -> bool:
-        """Check if an email is already registered."""
+    def email_existe(self, email: str) -> bool:
+        """Verifica se um email já está cadastrado."""
         return self.exists(email=email.lower().strip())
 
-    def find_active_by_id(self, user_id: str) -> User | None:
-        """Find an active user by ID."""
-        user = self.find_by_id(user_id)
-        if user and user.is_active:
+    def buscar_ativo_por_id(self, usuario_id: str) -> Usuario | None:
+        """Busca um usuário ativo por ID."""
+        user = self.find_by_id(usuario_id)
+        if user and user.esta_ativo:
             return user
         return None
 
-    def increment_failed_attempts(self, user: User) -> None:
-        """Atomically increment failed login attempts."""
-        User.objects(id=user.id).update_one(
-            inc__failed_login_attempts=1,
+    def incrementar_tentativas_falhas(self, usuario: Usuario) -> None:
+        """Incrementa atomicamente as tentativas de login falhas."""
+        Usuario.objects(id=usuario.id).update_one(
+            inc__tentativas_login_falhas=1,
         )
-        user.reload()
+        usuario.reload()
 
-    def reset_failed_attempts(self, user: User) -> None:
-        """Reset failed login attempts and unlock."""
-        User.objects(id=user.id).update_one(
-            set__failed_login_attempts=0,
-            unset__locked_until=True,
+    def resetar_tentativas_falhas(self, usuario: Usuario) -> None:
+        """Reseta as tentativas de login falhas e desbloqueia."""
+        Usuario.objects(id=usuario.id).update_one(
+            set__tentativas_login_falhas=0,
+            unset__bloqueado_ate=True,
         )

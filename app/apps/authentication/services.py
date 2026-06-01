@@ -1,13 +1,13 @@
 """
-Authentication service — all business logic for auth.
+Serviço de Autenticação — toda a lógica de negócio para auth.
 
-Handles:
-- User registration (email/password)
-- Login with credentials
-- Google OAuth 2.0 authentication
-- JWT token generation and refresh
-- Account lockout after failed attempts
-- Profile and address management
+Responsabilidades:
+- Cadastro de usuário (email/senha)
+- Login com credenciais
+- Autenticação Google OAuth 2.0
+- Geração e refresh de tokens JWT
+- Bloqueio de conta após tentativas falhas
+- Gestão de perfil e endereços
 """
 from __future__ import annotations
 
@@ -20,9 +20,9 @@ from django.conf import settings
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
-from apps.authentication.documents import User, Address
-from apps.authentication.repositories import UserRepository
-from apps.core.enums import UserRole, BCRYPT_ROUNDS, MAX_LOGIN_ATTEMPTS, LOCKOUT_DURATION_MINUTES
+from apps.authentication.documents import Usuario, Endereco
+from apps.authentication.repositories import RepositorioUsuario
+from apps.core.enums import PerfilUsuario, BCRYPT_ROUNDS, MAX_TENTATIVAS_LOGIN, DURACAO_BLOQUEIO_MINUTOS
 from apps.core.exceptions import AccountLockedError, ResourceNotFoundError
 from apps.core.utils import validate_password_strength, sanitize_input
 
@@ -30,97 +30,84 @@ logger = logging.getLogger(__name__)
 
 
 class AuthService:
-    """Service containing all authentication business logic."""
+    """Serviço contendo toda a lógica de negócio de autenticação."""
 
-    def __init__(self, user_repo: UserRepository | None = None) -> None:
-        self.repo = user_repo or UserRepository()
+    def __init__(self, user_repo: RepositorioUsuario | None = None) -> None:
+        self.repo = user_repo or RepositorioUsuario()
 
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # Registration
+    # Cadastro
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    def register(self, name: str, email: str, password: str, role: str = 'customer') -> dict:
+    def register(self, nome: str, email: str, senha: str, papel: str = 'cliente') -> dict:
         """
-        Register a new user with email/password.
-
-        Args:
-            name: User's full name
-            email: Email address (must be unique)
-            password: Raw password (will be hashed with bcrypt)
-            role: 'customer' or 'owner'
-
-        Returns:
-            Dict with user data and JWT tokens
-
-        Raises:
-            ValueError: If email already exists or password is weak
+        Cadastra um novo usuário com email/senha.
         """
         email = email.lower().strip()
-        name = sanitize_input(name.strip())
+        nome = sanitize_input(nome.strip())
 
-        if self.repo.email_exists(email):
+        # Mapear papel do serializer (em português mas valor amigável do Enum) para o enum real
+        mapa_papel = {'cliente': PerfilUsuario.CLIENTE, 'dono': PerfilUsuario.DONO}
+        papel = mapa_papel.get(papel, PerfilUsuario.CLIENTE)
+
+        if self.repo.email_existe(email):
             raise ValueError("Este email já está cadastrado.")
 
-        is_valid, error_msg = validate_password_strength(password)
+        is_valid, error_msg = validate_password_strength(senha)
         if not is_valid:
             raise ValueError(error_msg)
 
-        password_hash = bcrypt.hashpw(
-            password.encode('utf-8'),
+        senha_hash = bcrypt.hashpw(
+            senha.encode('utf-8'),
             bcrypt.gensalt(rounds=BCRYPT_ROUNDS),
         ).decode('utf-8')
 
-        user = User(name=name, email=email, password_hash=password_hash, role=role)
-        self.repo.save(user)
+        usuario = Usuario(nome=nome, email=email, senha_hash=senha_hash, papel=papel)
+        self.repo.save(usuario)
 
-        logger.info("New user registered: %s (role=%s)", email, role)
+        logger.info("Novo usuário cadastrado: %s (papel=%s)", email, papel)
 
         return {
-            'user': user.to_dict(),
-            **self._generate_tokens(user),
+            'user': usuario.to_dict(),
+            **self._gerar_tokens(usuario),
         }
 
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     # Login
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    def login(self, email: str, password: str) -> dict:
+    def login(self, email: str, senha: str) -> dict:
         """
-        Authenticate user with email and password.
+        Autentica usuário com email e senha.
 
-        Uses constant-time comparison to prevent timing attacks
-        for user enumeration.
-
-        Raises:
-            ValueError: If credentials are invalid
-            AccountLockedError: If account is locked due to failed attempts
+        Usa comparação de tempo constante para prevenir ataques de timing.
         """
         email = email.lower().strip()
 
-        user = self.repo.find_by_email(email)
-        if not user:
-            # Perform dummy hash to prevent timing-based user enumeration
+        usuario = self.repo.buscar_por_email(email)
+        if not usuario:
+            # Hash dummy para prevenir enumeração de usuários por timing
             bcrypt.checkpw(b'dummy', bcrypt.gensalt(rounds=BCRYPT_ROUNDS))
             raise ValueError("Email ou senha incorretos.")
 
-        self._check_lockout(user)
+        self._verificar_bloqueio(usuario)
 
-        if not user.password_hash or not bcrypt.checkpw(
-            password.encode('utf-8'),
-            user.password_hash.encode('utf-8'),
+        if not usuario.senha_hash or not bcrypt.checkpw(
+            senha.encode('utf-8'),
+            usuario.senha_hash.encode('utf-8'),
         ):
-            self._record_failed_attempt(user)
+            self._registrar_tentativa_falha(usuario)
             raise ValueError("Email ou senha incorretos.")
 
-        if not user.is_active:
+        if not usuario.esta_ativo:
             raise ValueError("Conta desativada.")
 
-        # Reset failed attempts on successful login
-        self.repo.reset_failed_attempts(user)
+        # Resetar tentativas falhas no login bem-sucedido
+        self.repo.resetar_tentativas_falhas(usuario)
 
-        logger.info("User logged in: %s", email)
+        logger.info("Usuário logado: %s", email)
 
         return {
-            'user': user.to_dict(),
-            **self._generate_tokens(user),
+            'user': usuario.to_dict(),
+            **self._gerar_tokens(usuario),
         }
 
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -130,62 +117,66 @@ class AuthService:
         self,
         credential: str | None = None,
         code: str | None = None,
-        role: str = 'customer',
+        papel: str = 'cliente',
     ) -> dict:
         """
-        Authenticate or register user via Google OAuth 2.0.
+        Autentica ou cadastra usuário via Google OAuth 2.0.
 
-        If user doesn't exist, creates a new account with the given role.
+        Se o usuário não existe, cria uma nova conta com o papel informado.
         """
-        google_user = self._verify_google_token(credential)
+        google_user = self._verificar_token_google(credential)
 
         email = google_user['email'].lower()
         google_id = google_user.get('sub', '')
 
-        user = self.repo.find_by_email(email)
+        # Mapear papel
+        mapa_papel = {'cliente': PerfilUsuario.CLIENTE, 'dono': PerfilUsuario.DONO}
+        papel = mapa_papel.get(papel, PerfilUsuario.CLIENTE)
+
+        usuario = self.repo.buscar_por_email(email)
         is_new = False
 
-        if not user:
-            user = User(
+        if not usuario:
+            usuario = Usuario(
                 email=email,
-                name=google_user.get('name', email.split('@')[0]),
+                nome=google_user.get('name', email.split('@')[0]),
                 avatar_url=google_user.get('picture'),
                 google_id=google_id,
-                role=role,
+                papel=papel,
             )
-            self.repo.save(user)
+            self.repo.save(usuario)
             is_new = True
-            logger.info("New user created via Google: %s (role=%s, id=%s)", email, role, user.id)
+            logger.info("Novo usuário criado via Google: %s (papel=%s, id=%s)", email, papel, usuario.id)
         else:
             needs_save = False
-            if not user.google_id:
-                user.google_id = google_id
+            if not usuario.google_id:
+                usuario.google_id = google_id
                 needs_save = True
 
-            if role == UserRole.OWNER and user.role == UserRole.CUSTOMER:
-                user.role = UserRole.OWNER
+            if papel == PerfilUsuario.DONO and usuario.papel == PerfilUsuario.CLIENTE:
+                usuario.papel = PerfilUsuario.DONO
                 needs_save = True
-                logger.info("User %s upgraded to 'owner' via Google OAuth", email)
+                logger.info("Usuário %s promovido para 'dono' via Google OAuth", email)
 
             if needs_save:
-                self.repo.save(user)
+                self.repo.save(usuario)
 
-            logger.info("Existing user logged in via Google: %s (role=%s)", email, user.role)
+            logger.info("Usuário existente logado via Google: %s (papel=%s)", email, usuario.papel)
 
-        if not user.is_active:
+        if not usuario.esta_ativo:
             raise ValueError("Conta desativada.")
 
         return {
-            'user': user.to_dict(),
+            'user': usuario.to_dict(),
             'is_new': is_new,
-            **self._generate_tokens(user),
+            **self._gerar_tokens(usuario),
         }
 
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # Token Management
+    # Gestão de Tokens
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     def refresh_token(self, refresh_token_str: str) -> dict:
-        """Generate a new access token from a valid refresh token."""
+        """Gera um novo access token a partir de um refresh token válido."""
         try:
             payload = jwt.decode(
                 refresh_token_str,
@@ -200,131 +191,144 @@ class AuthService:
         if payload.get('type') != 'refresh':
             raise ValueError("Tipo de token inválido.")
 
-        user = self.repo.find_active_by_id(payload['user_id'])
-        if not user:
+        usuario = self.repo.buscar_ativo_por_id(payload['user_id'])
+        if not usuario:
             raise ValueError("Usuário não encontrado ou desativado.")
 
-        return {'access_token': self._create_access_token(user)}
+        return {'access_token': self._criar_access_token(usuario)}
 
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # Profile & Address Management
+    # Gestão de Perfil e Endereços
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     def update_profile(self, user_id: str, data: dict) -> dict:
-        """Update user profile fields."""
-        user = self.repo.find_by_id(user_id)
-        if not user:
+        """Atualiza campos do perfil do usuário."""
+        usuario = self.repo.find_by_id(user_id)
+        if not usuario:
             raise ResourceNotFoundError('Usuário')
 
-        if 'name' in data:
-            user.name = sanitize_input(data['name'].strip())
-        if 'phone' in data:
-            user.phone = sanitize_input(data['phone'].strip())
+        if 'nome' in data:
+            usuario.nome = sanitize_input(data['nome'].strip())
+        if 'telefone' in data:
+            usuario.telefone = sanitize_input(data['telefone'].strip())
 
-        self.repo.save(user)
-        return user.to_dict()
+        self.repo.save(usuario)
+        return usuario.to_dict()
 
-    def update_password(self, user_id: str, current_password: str, new_password: str) -> bool:
-        """Update user password after verifying current password."""
-        user = self.repo.find_by_id(user_id)
-        if not user:
+    def update_password(self, user_id: str, senha_atual: str, nova_senha: str) -> bool:
+        """Atualiza a senha do usuário após verificar a senha atual."""
+        usuario = self.repo.find_by_id(user_id)
+        if not usuario:
             raise ResourceNotFoundError('Usuário')
 
-        if not user.password_hash or not bcrypt.checkpw(
-            current_password.encode('utf-8'),
-            user.password_hash.encode('utf-8'),
+        if not usuario.senha_hash or not bcrypt.checkpw(
+            senha_atual.encode('utf-8'),
+            usuario.senha_hash.encode('utf-8'),
         ):
             raise ValueError("Senha atual incorreta.")
 
-        is_valid, error_msg = validate_password_strength(new_password)
+        is_valid, error_msg = validate_password_strength(nova_senha)
         if not is_valid:
             raise ValueError(error_msg)
 
-        user.password_hash = bcrypt.hashpw(
-            new_password.encode('utf-8'),
+        usuario.senha_hash = bcrypt.hashpw(
+            nova_senha.encode('utf-8'),
             bcrypt.gensalt(rounds=BCRYPT_ROUNDS),
         ).decode('utf-8')
 
-        self.repo.save(user)
+        self.repo.save(usuario)
         return True
 
     def add_address(self, user_id: str, data: dict) -> dict:
-        """Add a new address to user's address list."""
-        user = self.repo.find_by_id(user_id)
-        if not user:
+        """Adiciona um novo endereço à lista de endereços do usuário."""
+        usuario = self.repo.find_by_id(user_id)
+        if not usuario:
             raise ResourceNotFoundError('Usuário')
 
-        if data.get('is_default'):
-            for addr in user.addresses:
-                addr.is_default = False
+        # Mapear campos do serializer para o documento
+        dados_endereco = {
+            'rotulo': data.get('rotulo', 'Casa'),
+            'rua': data['rua'],
+            'numero': data['numero'],
+            'complemento': data.get('complemento', ''),
+            'bairro': data['bairro'],
+            'cidade': data['cidade'],
+            'estado': data['estado'],
+            'cep': data['cep'],
+            'padrao': data.get('padrao', False),
+        }
 
-        new_address = Address(**data)
-        user.addresses.append(new_address)
-        self.repo.save(user)
-        return user.to_dict()
+        if dados_endereco.get('padrao'):
+            for addr in usuario.enderecos:
+                addr.padrao = False
+
+        novo_endereco = Endereco(**dados_endereco)
+        usuario.enderecos.append(novo_endereco)
+        self.repo.save(usuario)
+        return usuario.to_dict()
 
     def remove_address(self, user_id: str, index: int) -> dict:
-        """Remove an address by index."""
-        user = self.repo.find_by_id(user_id)
-        if not user:
+        """Remove um endereço pelo índice."""
+        usuario = self.repo.find_by_id(user_id)
+        if not usuario:
             raise ResourceNotFoundError('Usuário')
 
-        if 0 <= index < len(user.addresses):
-            user.addresses.pop(index)
-            self.repo.save(user)
-            return user.to_dict()
+        if 0 <= index < len(usuario.enderecos):
+            usuario.enderecos.pop(index)
+            self.repo.save(usuario)
+            return usuario.to_dict()
         raise ValueError("Endereço não encontrado.")
 
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # Private helpers
+    # Métodos privados
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    def _generate_tokens(self, user: User) -> dict:
-        """Generate both access and refresh JWT tokens."""
+    def _gerar_tokens(self, usuario: Usuario) -> dict:
+        """Gera ambos os tokens JWT (access e refresh)."""
         return {
-            'access_token': self._create_access_token(user),
-            'refresh_token': self._create_refresh_token(user),
+            'access_token': self._criar_access_token(usuario),
+            'refresh_token': self._criar_refresh_token(usuario),
         }
 
-    def _create_access_token(self, user: User) -> str:
-        """Create a JWT access token."""
+    def _criar_access_token(self, usuario: Usuario) -> str:
+        """Cria um JWT access token."""
         now = datetime.now(timezone.utc)
         payload = {
-            'user_id': str(user.id),
-            'email': user.email,
-            'role': user.role,
+            'user_id': str(usuario.id),
+            'email': usuario.email,
+            'papel': usuario.papel,
             'type': 'access',
             'iat': now,
             'exp': now + timedelta(hours=settings.JWT_ACCESS_TOKEN_LIFETIME_HOURS),
         }
         return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
-    def _create_refresh_token(self, user: User) -> str:
-        """Create a JWT refresh token."""
+    def _criar_refresh_token(self, usuario: Usuario) -> str:
+        """Cria um JWT refresh token."""
         now = datetime.now(timezone.utc)
         payload = {
-            'user_id': str(user.id),
+            'user_id': str(usuario.id),
             'type': 'refresh',
             'iat': now,
             'exp': now + timedelta(days=settings.JWT_REFRESH_TOKEN_LIFETIME_DAYS),
         }
         return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
-    def _check_lockout(self, user: User) -> None:
-        """Check if user account is locked due to too many failed attempts."""
-        if user.locked_until and user.locked_until > datetime.now(timezone.utc):
-            remaining = (user.locked_until - datetime.now(timezone.utc)).seconds // 60
+    def _verificar_bloqueio(self, usuario: Usuario) -> None:
+        """Verifica se a conta do usuário está bloqueada."""
+        if usuario.bloqueado_ate and usuario.bloqueado_ate > datetime.now(timezone.utc):
+            remaining = (usuario.bloqueado_ate - datetime.now(timezone.utc)).seconds // 60
             raise AccountLockedError(minutes_remaining=max(remaining, 1))
 
-    def _record_failed_attempt(self, user: User) -> None:
-        """Record a failed login attempt. Lock account after MAX_LOGIN_ATTEMPTS failures."""
-        user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+    def _registrar_tentativa_falha(self, usuario: Usuario) -> None:
+        """Registra uma tentativa de login falha. Bloqueia a conta após MAX_TENTATIVAS_LOGIN falhas."""
+        usuario.tentativas_login_falhas = (usuario.tentativas_login_falhas or 0) + 1
 
-        if user.failed_login_attempts >= MAX_LOGIN_ATTEMPTS:
-            user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
+        if usuario.tentativas_login_falhas >= MAX_TENTATIVAS_LOGIN:
+            usuario.bloqueado_ate = datetime.now(timezone.utc) + timedelta(minutes=DURACAO_BLOQUEIO_MINUTOS)
 
-        self.repo.save(user)
+        self.repo.save(usuario)
 
-    def _verify_google_token(self, credential: str) -> dict:
-        """Verify a Google ID token and return the user info."""
+    def _verificar_token_google(self, credential: str) -> dict:
+        """Verifica um token de ID do Google e retorna as informações do usuário."""
         try:
             idinfo = id_token.verify_oauth2_token(
                 credential,
