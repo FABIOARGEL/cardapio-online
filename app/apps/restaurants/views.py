@@ -1,11 +1,5 @@
 """
 Restaurant, Product, Stats, and Coupon API views.
-
-Refactored:
-- Uses authentication_classes/permission_classes instead of manual auth
-- Thin views: delegate all logic to services
-- Domain exceptions propagate to custom_exception_handler
-- No generic except clauses
 """
 from __future__ import annotations
 
@@ -32,12 +26,7 @@ from apps.restaurants.services import (
 )
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Restaurants
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 class RestaurantListView(APIView):
-    """GET /api/restaurants/ — List active restaurants (public)."""
-
     def get(self, request):
         service = RestaurantService()
         page = int(request.query_params.get('page', 1))
@@ -48,7 +37,6 @@ class RestaurantListView(APIView):
 
 
 class RestaurantCreateView(APIView):
-    """POST /api/restaurants/ — Create a restaurant (owner only)."""
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsOwner]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -66,11 +54,9 @@ class RestaurantCreateView(APIView):
 
 
 class RestaurantDetailView(APIView):
-    """GET / PUT / DELETE /api/restaurants/:id/"""
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request, restaurant_id):
-        """Public: get restaurant with products."""
         service = RestaurantService()
         result = service.get_restaurant(restaurant_id)
         if not result:
@@ -81,10 +67,9 @@ class RestaurantDetailView(APIView):
         return Response(result)
 
     def put(self, request, restaurant_id):
-        """Owner only: update restaurant."""
         auth = JWTAuthentication()
         user_auth = auth.authenticate(request)
-        if not user_auth or user_auth[0].role != 'owner':
+        if not user_auth or user_auth[0].papel != 'dono':
             return Response({'error': 'Sem permissão.'}, status=status.HTTP_403_FORBIDDEN)
         user = user_auth[0]
 
@@ -101,10 +86,9 @@ class RestaurantDetailView(APIView):
         return Response(result)
 
     def delete(self, request, restaurant_id):
-        """Owner only: delete restaurant."""
         auth = JWTAuthentication()
         user_auth = auth.authenticate(request)
-        if not user_auth or user_auth[0].role != 'owner':
+        if not user_auth or user_auth[0].papel != 'dono':
             return Response({'error': 'Sem permissão.'}, status=status.HTTP_403_FORBIDDEN)
         user = user_auth[0]
 
@@ -114,8 +98,6 @@ class RestaurantDetailView(APIView):
 
 
 class RestaurantSlugView(APIView):
-    """GET /api/restaurants/slug/:slug/ — Public."""
-
     def get(self, request, slug):
         service = RestaurantService()
         result = service.get_restaurant_by_slug(slug)
@@ -128,7 +110,6 @@ class RestaurantSlugView(APIView):
 
 
 class OwnerRestaurantsView(APIView):
-    """GET /api/restaurants/mine/ — List restaurants owned by the authenticated user."""
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsOwner]
 
@@ -139,7 +120,6 @@ class OwnerRestaurantsView(APIView):
 
 
 class OwnerRestaurantDetailView(APIView):
-    """GET /api/restaurants/:id/owner-detail/ — Full detail for owner."""
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsOwner]
 
@@ -149,25 +129,19 @@ class OwnerRestaurantDetailView(APIView):
         return Response(result)
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Products
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 class ProductListView(APIView):
-    """GET / POST /api/restaurants/:id/products/"""
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request, restaurant_id):
-        """Public: list products for a restaurant."""
         service = ProductService()
         category = request.query_params.get('category')
         result = service.list_products(restaurant_id, category=category)
         return Response(result)
 
     def post(self, request, restaurant_id):
-        """Owner only: add a product."""
         auth = JWTAuthentication()
         user_auth = auth.authenticate(request)
-        if not user_auth or user_auth[0].role != 'owner':
+        if not user_auth or user_auth[0].papel != 'dono':
             return Response({'error': 'Sem permissão.'}, status=status.HTTP_403_FORBIDDEN)
         user = user_auth[0]
 
@@ -188,8 +162,6 @@ class ProductListView(APIView):
 
 
 class AllProductsView(APIView):
-    """GET /api/restaurants/all-products/ — Public global catalog."""
-
     def get(self, request):
         service = ProductService()
         page = int(request.query_params.get('page', 1))
@@ -200,14 +172,12 @@ class AllProductsView(APIView):
 
 
 class ProductDetailView(APIView):
-    """PUT / DELETE /api/restaurants/:restaurant_id/products/:product_id/"""
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def put(self, request, restaurant_id, product_id):
-        """Owner only: update product."""
         auth = JWTAuthentication()
         user_auth = auth.authenticate(request)
-        if not user_auth or user_auth[0].role != 'owner':
+        if not user_auth or user_auth[0].papel != 'dono':
             return Response({'error': 'Sem permissão.'}, status=status.HTTP_403_FORBIDDEN)
         user = user_auth[0]
 
@@ -228,10 +198,9 @@ class ProductDetailView(APIView):
         return Response(result)
 
     def delete(self, request, restaurant_id, product_id):
-        """Owner only: remove product."""
         auth = JWTAuthentication()
         user_auth = auth.authenticate(request)
-        if not user_auth or user_auth[0].role != 'owner':
+        if not user_auth or user_auth[0].papel != 'dono':
             return Response({'error': 'Sem permissão.'}, status=status.HTTP_403_FORBIDDEN)
         user = user_auth[0]
 
@@ -244,11 +213,7 @@ class ProductDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Dashboard Stats & Reports
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 class StatsView(APIView):
-    """GET /api/restaurants/:id/stats/ — Dashboard statistics."""
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsOwner]
 
@@ -259,7 +224,6 @@ class StatsView(APIView):
 
 
 class OrderHistoryView(APIView):
-    """GET /api/restaurants/:id/history/ — Order history with filters."""
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsOwner]
 
@@ -276,11 +240,7 @@ class OrderHistoryView(APIView):
         return Response(result)
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Coupons
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 class CouponListView(APIView):
-    """GET / POST /api/restaurants/:id/coupons/"""
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsOwner]
 
@@ -302,7 +262,6 @@ class CouponListView(APIView):
 
 
 class CouponDetailView(APIView):
-    """PUT / DELETE /api/restaurants/:id/coupons/:coupon_id/"""
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated, IsOwner]
 

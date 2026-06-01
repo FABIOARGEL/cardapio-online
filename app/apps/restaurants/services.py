@@ -1,12 +1,5 @@
 """
-Restaurant, Product, Stats, and Coupon services — business logic layer.
-
-Refactored to use:
-- Repository pattern (no inline queries)
-- Dependency injection
-- Centralized enums
-- Domain-specific exceptions
-- CouponValidator for DRY
+Serviços de Restaurante, Produto, Estatísticas e Cupom — camada de lógica de negócio.
 """
 from __future__ import annotations
 
@@ -16,44 +9,44 @@ from decimal import Decimal
 
 from bson import ObjectId
 
-from apps.core.enums import RestaurantStatus
+from apps.core.enums import StatusRestaurante
 from apps.core.exceptions import OwnershipError, ResourceNotFoundError
 from apps.core.image_service import ImageProcessor
 from apps.core.storage import get_upload_service
 from apps.core.utils import generate_slug, sanitize_input
-from apps.orders.repositories import OrderRepository
+from apps.orders.repositories import RepositorioPedido
 from apps.restaurants.documents import (
-    BusinessHour,
-    Contact,
-    Coupon,
-    Product,
-    Restaurant,
-    RestaurantAddress,
+    HorarioFuncionamento,
+    Contato,
+    Cupom,
+    Produto,
+    Restaurante,
+    EnderecoRestaurante,
 )
-from apps.restaurants.repositories import RestaurantRepository
+from apps.restaurants.repositories import RepositorioRestaurante
 
 logger = logging.getLogger(__name__)
 
 
 class RestaurantService:
-    """Business logic for restaurant CRUD operations."""
+    """Lógica de negócio para operações CRUD de restaurantes."""
 
     def __init__(
         self,
-        restaurant_repo: RestaurantRepository | None = None,
+        restaurant_repo: RepositorioRestaurante | None = None,
         upload_service=None,
     ) -> None:
-        self.repo = restaurant_repo or RestaurantRepository()
+        self.repo = restaurant_repo or RepositorioRestaurante()
         self.upload_service = upload_service or get_upload_service()
         self.image_processor = ImageProcessor()
 
     def create_restaurant(self, owner_id: str, data: dict, cover_image=None) -> dict:
-        """Create a new restaurant with a unique slug."""
-        name = sanitize_input(data['name'].strip())
-        slug = generate_slug(name)
+        """Cria um novo restaurante com um slug único."""
+        nome = sanitize_input(data['nome'].strip())
+        slug = generate_slug(nome)
         base_slug = slug
         counter = 1
-        while self.repo.slug_exists(slug):
+        while self.repo.slug_existe(slug):
             slug = f"{base_slug}-{counter}"
             counter += 1
 
@@ -62,66 +55,92 @@ class RestaurantService:
             optimized = self.image_processor.optimize(cover_image)
             cover_url = self.upload_service.upload(optimized, folder='restaurants')
 
-        contact = Contact(**data['contact']) if data.get('contact') else None
-        address = RestaurantAddress(**data['address']) if data.get('address') else None
-        business_hours = [BusinessHour(**bh) for bh in data.get('business_hours', [])]
+        # Mapeia contato e endereço
+        dados_contato = None
+        if data.get('contato'):
+            dados_contato = Contato(
+                telefone=data['contato']['telefone'],
+                email=data['contato'].get('email'),
+                whatsapp=data['contato'].get('whatsapp')
+            )
 
-        initial_status = data.get('status', RestaurantStatus.ACTIVE)
+        dados_endereco = None
+        if data.get('endereco'):
+            dados_endereco = EnderecoRestaurante(
+                rua=data['endereco']['rua'],
+                numero=data['endereco']['numero'],
+                complemento=data['endereco'].get('complemento', ''),
+                bairro=data['endereco']['bairro'],
+                cidade=data['endereco']['cidade'],
+                estado=data['endereco']['estado'],
+                cep=data['endereco']['cep']
+            )
 
-        restaurant = Restaurant(
-            owner_id=ObjectId(owner_id),
-            name=name,
+        horarios_funcionamento = []
+        for bh in data.get('horarios_funcionamento', []):
+            horarios_funcionamento.append(HorarioFuncionamento(
+                dia=bh['dia'],
+                abertura=bh.get('abertura'),
+                fechamento=bh.get('fechamento'),
+                fechado=bh.get('fechado', False)
+            ))
+
+        initial_status = data.get('status', StatusRestaurante.ATIVO)
+
+        restaurante = Restaurante(
+            dono_id=ObjectId(owner_id),
+            nome=nome,
             slug=slug,
-            description=sanitize_input(data.get('description', '')),
-            cover_image_url=cover_url,
-            contact=contact,
-            address=address,
-            business_hours=business_hours,
+            descricao=sanitize_input(data.get('descricao', '')),
+            imagem_capa_url=cover_url,
+            contato=dados_contato,
+            endereco=dados_endereco,
+            horarios_funcionamento=horarios_funcionamento,
             status=initial_status,
-            delivery_fee=Decimal(str(data.get('delivery_fee', 0))),
+            taxa_entrega=Decimal(str(data.get('taxa_entrega', 0))),
         )
-        self.repo.save(restaurant)
+        self.repo.save(restaurante)
 
         logger.info(
-            "Restaurant '%s' (id=%s) created by owner %s with status '%s'",
-            name, restaurant.id, owner_id, initial_status,
+            "Restaurante '%s' (id=%s) criado pelo dono %s com status '%s'",
+            nome, restaurante.id, owner_id, initial_status,
         )
-        return restaurant.to_dict()
+        return restaurante.to_dict()
 
     def get_restaurant(self, restaurant_id: str) -> dict | None:
-        """Get a restaurant by ID with available products."""
-        restaurant = self.repo.find_by_id(restaurant_id)
-        if not restaurant:
+        """Busca um restaurante por ID com produtos disponíveis."""
+        restaurante = self.repo.find_by_id(restaurant_id)
+        if not restaurante:
             return None
-        return restaurant.to_dict(include_products=True)
+        return restaurante.to_dict(include_products=True)
 
     def get_restaurant_detail_for_owner(self, restaurant_id: str, owner_id: str) -> dict:
-        """Get full restaurant data for owner (includes all products + coupons)."""
-        restaurant = self.repo.find_by_id(restaurant_id)
-        if not restaurant:
+        """Busca dados completos do restaurante para o dono."""
+        restaurante = self.repo.find_by_id(restaurant_id)
+        if not restaurante:
             raise ResourceNotFoundError('Restaurante')
-        if str(restaurant.owner_id) != owner_id:
+        if str(restaurante.dono_id) != owner_id:
             raise OwnershipError()
-        return restaurant.to_dict(include_all_products=True, include_coupons=True)
+        return restaurante.to_dict(include_all_products=True, include_coupons=True)
 
     def get_restaurant_by_slug(self, slug: str) -> dict | None:
-        """Get a restaurant by URL slug with available products."""
-        restaurant = self.repo.find_by_slug(slug)
-        if not restaurant:
+        """Busca um restaurante por URL slug."""
+        restaurante = self.repo.buscar_por_slug(slug)
+        if not restaurante:
             return None
-        return restaurant.to_dict(include_products=True)
+        return restaurante.to_dict(include_products=True)
 
     def list_restaurants(
         self, page: int = 1, search: str | None = None, category: str | None = None,
     ) -> dict:
-        """List active restaurants for public consumption."""
-        result = self.repo.list_active(page=page, search=search, category=category)
+        """Lista restaurantes ativos."""
+        result = self.repo.listar_ativos(page=page, search=search, category=category)
         return result.to_dict()
 
     def list_owner_restaurants(self, owner_id: str) -> list[dict]:
-        """List all restaurants owned by a user."""
-        restaurants = self.repo.find_by_owner(owner_id)
-        return [r.to_dict() for r in restaurants]
+        """Lista todos os restaurantes de um usuário."""
+        restaurantes = self.repo.buscar_por_dono(owner_id)
+        return [r.to_dict() for r in restaurantes]
 
     def update_restaurant(
         self,
@@ -131,96 +150,115 @@ class RestaurantService:
         cover_image=None,
         logo_image=None,
     ) -> dict:
-        """Update restaurant details. Verifies ownership."""
-        restaurant = self.repo.find_by_id(restaurant_id)
-        if not restaurant:
+        """Atualiza detalhes do restaurante."""
+        restaurante = self.repo.find_by_id(restaurant_id)
+        if not restaurante:
             raise ResourceNotFoundError('Restaurante')
-        if str(restaurant.owner_id) != owner_id:
+        if str(restaurante.dono_id) != owner_id:
             raise OwnershipError()
 
-        if 'name' in data:
-            restaurant.name = sanitize_input(data['name'].strip())
-        if 'description' in data:
-            restaurant.description = sanitize_input(data['description'])
+        if 'nome' in data:
+            restaurante.nome = sanitize_input(data['nome'].strip())
+        if 'descricao' in data:
+            restaurante.descricao = sanitize_input(data['descricao'])
         if 'status' in data:
-            restaurant.status = data['status']
-        if 'delivery_fee' in data:
-            restaurant.delivery_fee = Decimal(str(data['delivery_fee']))
-        if 'contact' in data:
-            restaurant.contact = Contact(**data['contact'])
-        if 'address' in data:
-            restaurant.address = RestaurantAddress(**data['address'])
-        if 'business_hours' in data:
-            restaurant.business_hours = [BusinessHour(**bh) for bh in data['business_hours']]
+            restaurante.status = data['status']
+        if 'taxa_entrega' in data:
+            restaurante.taxa_entrega = Decimal(str(data['taxa_entrega']))
+        if 'contato' in data:
+            restaurante.contato = Contato(
+                telefone=data['contato']['telefone'],
+                email=data['contato'].get('email'),
+                whatsapp=data['contato'].get('whatsapp')
+            )
+        if 'endereco' in data:
+            restaurante.endereco = EnderecoRestaurante(
+                rua=data['endereco']['rua'],
+                numero=data['endereco']['numero'],
+                complemento=data['endereco'].get('complemento', ''),
+                bairro=data['endereco']['bairro'],
+                cidade=data['endereco']['cidade'],
+                estado=data['endereco']['estado'],
+                cep=data['endereco']['cep']
+            )
+        if 'horarios_funcionamento' in data:
+            restaurante.horarios_funcionamento = [
+                HorarioFuncionamento(
+                    dia=bh['dia'],
+                    abertura=bh.get('abertura'),
+                    fechamento=bh.get('fechamento'),
+                    fechado=bh.get('fechado', False)
+                ) for bh in data['horarios_funcionamento']
+            ]
 
         if cover_image:
-            if restaurant.cover_image_url:
-                self.upload_service.delete(restaurant.cover_image_url)
+            if restaurante.imagem_capa_url:
+                self.upload_service.delete(restaurante.imagem_capa_url)
             optimized = self.image_processor.optimize(cover_image)
-            restaurant.cover_image_url = self.upload_service.upload(optimized, folder='restaurants')
+            restaurante.imagem_capa_url = self.upload_service.upload(optimized, folder='restaurants')
 
         if logo_image:
-            if restaurant.logo_url:
-                self.upload_service.delete(restaurant.logo_url)
+            if restaurante.logo_url:
+                self.upload_service.delete(restaurante.logo_url)
             optimized = self.image_processor.optimize(logo_image)
-            restaurant.logo_url = self.upload_service.upload(optimized, folder='restaurants')
+            restaurante.logo_url = self.upload_service.upload(optimized, folder='restaurants')
 
-        self.repo.save(restaurant)
-        return restaurant.to_dict()
+        self.repo.save(restaurante)
+        return restaurante.to_dict()
 
     def delete_restaurant(self, restaurant_id: str, owner_id: str) -> bool:
-        """Delete a restaurant and all associated images."""
-        restaurant = self.repo.find_by_id(restaurant_id)
-        if not restaurant:
+        """Deleta um restaurante e suas imagens associadas."""
+        restaurante = self.repo.find_by_id(restaurant_id)
+        if not restaurante:
             raise ResourceNotFoundError('Restaurante')
-        if str(restaurant.owner_id) != owner_id:
+        if str(restaurante.dono_id) != owner_id:
             raise OwnershipError()
 
-        # Clean up images
-        if restaurant.cover_image_url:
-            self.upload_service.delete(restaurant.cover_image_url)
-        for product in restaurant.products:
-            if product.image_url:
-                self.upload_service.delete(product.image_url)
-            for img_url in (product.images or []):
+        # Limpa imagens
+        if restaurante.imagem_capa_url:
+            self.upload_service.delete(restaurante.imagem_capa_url)
+        for produto in restaurante.produtos:
+            if produto.imagem_url:
+                self.upload_service.delete(produto.imagem_url)
+            for img_url in (produto.imagens or []):
                 self.upload_service.delete(img_url)
 
-        self.repo.delete(restaurant)
-        logger.info("Restaurant %s deleted by owner %s", restaurant_id, owner_id)
+        self.repo.delete(restaurante)
+        logger.info("Restaurante %s deletado pelo dono %s", restaurant_id, owner_id)
         return True
 
 
 class ProductService:
-    """Business logic for product management."""
+    """Lógica de negócio para gerenciamento de produtos."""
 
     def __init__(
         self,
-        restaurant_repo: RestaurantRepository | None = None,
+        restaurant_repo: RepositorioRestaurante | None = None,
         upload_service=None,
     ) -> None:
-        self.repo = restaurant_repo or RestaurantRepository()
+        self.repo = restaurant_repo or RepositorioRestaurante()
         self.upload_service = upload_service or get_upload_service()
         self.image_processor = ImageProcessor()
 
-    def _get_restaurant_for_owner(self, restaurant_id: str, owner_id: str) -> Restaurant:
-        """Helper: fetch restaurant and verify ownership."""
-        restaurant = self.repo.find_by_id(restaurant_id)
-        if not restaurant:
+    def _get_restaurant_for_owner(self, restaurant_id: str, owner_id: str) -> Restaurante:
+        """Helper: busca restaurante e verifica posse."""
+        restaurante = self.repo.find_by_id(restaurant_id)
+        if not restaurante:
             raise ResourceNotFoundError('Restaurante')
-        if str(restaurant.owner_id) != owner_id:
+        if str(restaurante.dono_id) != owner_id:
             raise OwnershipError()
-        return restaurant
+        return restaurante
 
-    def _find_product(self, restaurant: Restaurant, product_id: str) -> Product:
-        """Helper: find embedded product by ID."""
-        product = next((p for p in restaurant.products if str(p._id) == product_id), None)
-        if not product:
+    def _find_product(self, restaurante: Restaurante, product_id: str) -> Produto:
+        """Helper: encontra produto embarcado por ID."""
+        produto = next((p for p in restaurante.produtos if str(p._id) == product_id), None)
+        if not produto:
             raise ResourceNotFoundError('Produto')
-        return product
+        return produto
 
     def add_product(self, restaurant_id: str, owner_id: str, data: dict, images=None) -> dict:
-        """Add a product to a restaurant."""
-        restaurant = self._get_restaurant_for_owner(restaurant_id, owner_id)
+        """Adiciona um produto a um restaurante."""
+        restaurante = self._get_restaurant_for_owner(restaurant_id, owner_id)
 
         image_urls = []
         if images:
@@ -229,97 +267,100 @@ class ProductService:
                 image_urls.append(self.upload_service.upload(optimized, folder='products'))
 
         main_image_url = image_urls[0] if image_urls else ''
-        product = Product(
+        produto = Produto(
             _id=ObjectId(),
-            name=sanitize_input(data['name'].strip()),
-            description=sanitize_input(data.get('description', '')),
-            price=data['price'],
-            category=data['category'],
-            image_url=main_image_url,
-            images=image_urls,
-            is_available=data.get('is_available', True),
-            sort_order=data.get('sort_order', 0),
-            stock=data.get('stock', -1),
+            nome=sanitize_input(data['nome'].strip()),
+            descricao=sanitize_input(data.get('descricao', '')),
+            preco=data['preco'],
+            categoria=data['categoria'],
+            imagem_url=main_image_url,
+            imagens=image_urls,
+            esta_disponivel=data.get('esta_disponivel', True),
+            ordem=data.get('ordem', 0),
+            estoque=data.get('estoque', -1),
         )
-        restaurant.products.append(product)
-        if product.category not in restaurant.categories:
-            restaurant.categories.append(product.category)
-        self.repo.save(restaurant)
+        restaurante.produtos.append(produto)
+        if produto.categoria not in restaurante.categorias:
+            restaurante.categorias.append(produto.categoria)
+        self.repo.save(restaurante)
 
-        logger.info("Product '%s' added to restaurant %s", product.name, restaurant_id)
-        return product.to_dict()
+        logger.info("Produto '%s' adicionado ao restaurante %s", produto.nome, restaurant_id)
+        return produto.to_dict()
 
     def update_product(
         self, restaurant_id: str, product_id: str, owner_id: str, data: dict, images=None,
     ) -> dict:
-        """Update a product within a restaurant."""
-        restaurant = self._get_restaurant_for_owner(restaurant_id, owner_id)
-        product = self._find_product(restaurant, product_id)
+        """Atualiza um produto dentro de um restaurante."""
+        restaurante = self._get_restaurant_for_owner(restaurant_id, owner_id)
+        produto = self._find_product(restaurante, product_id)
 
-        for field in ('name', 'description', 'price', 'category', 'is_available', 'sort_order', 'stock'):
+        campos_permitidos = [
+            'nome', 'descricao', 'preco', 'categoria', 
+            'esta_disponivel', 'ordem', 'estoque'
+        ]
+
+        for field in campos_permitidos:
             if field in data:
                 val = data[field]
-                if field in ('name', 'description') and isinstance(val, str):
+                if field in ('nome', 'descricao') and isinstance(val, str):
                     val = sanitize_input(val)
-                setattr(product, field, val)
+                setattr(produto, field, val)
 
         if images is not None and len(images) > 0:
-            # Delete old images
-            if product.image_url:
-                self.upload_service.delete(product.image_url)
-            for img_url in (product.images or []):
+            if produto.imagem_url:
+                self.upload_service.delete(produto.imagem_url)
+            for img_url in (produto.imagens or []):
                 try:
                     self.upload_service.delete(img_url)
                 except Exception:
                     pass
 
-            # Upload new images
             new_urls = []
             for img in images:
                 optimized = self.image_processor.optimize(img)
                 new_urls.append(self.upload_service.upload(optimized, folder='products'))
-            product.image_url = new_urls[0] if new_urls else ''
-            product.images = new_urls
+            produto.imagem_url = new_urls[0] if new_urls else ''
+            produto.imagens = new_urls
 
-        product.updated_at = datetime.now(timezone.utc)
-        self.repo.save(restaurant)
-        return product.to_dict()
+        produto.atualizado_em = datetime.now(timezone.utc)
+        self.repo.save(restaurante)
+        return produto.to_dict()
 
     def remove_product(self, restaurant_id: str, product_id: str, owner_id: str) -> bool:
-        """Remove a product and its images."""
-        restaurant = self._get_restaurant_for_owner(restaurant_id, owner_id)
-        product = self._find_product(restaurant, product_id)
+        """Remove um produto e suas imagens."""
+        restaurante = self._get_restaurant_for_owner(restaurant_id, owner_id)
+        produto = self._find_product(restaurante, product_id)
 
-        if product.image_url:
-            self.upload_service.delete(product.image_url)
-        for img_url in (product.images or []):
+        if produto.imagem_url:
+            self.upload_service.delete(produto.imagem_url)
+        for img_url in (produto.imagens or []):
             try:
                 self.upload_service.delete(img_url)
             except Exception:
                 pass
 
-        restaurant.products.remove(product)
-        restaurant.categories = list({p.category for p in restaurant.products})
-        self.repo.save(restaurant)
+        restaurante.produtos.remove(produto)
+        restaurante.categorias = list({p.categoria for p in restaurante.produtos})
+        self.repo.save(restaurante)
 
-        logger.info("Product %s removed from restaurant %s", product_id, restaurant_id)
+        logger.info("Produto %s removido do restaurante %s", product_id, restaurant_id)
         return True
 
     def list_products(
         self, restaurant_id: str, category: str | None = None, available_only: bool = True,
     ) -> list[dict]:
-        """List products for a specific restaurant."""
-        restaurant = self.repo.find_by_id(restaurant_id)
-        if not restaurant:
+        """Lista produtos para um restaurante específico."""
+        restaurante = self.repo.find_by_id(restaurant_id)
+        if not restaurante:
             raise ResourceNotFoundError('Restaurante')
 
-        products = restaurant.products
+        produtos = restaurante.produtos
         if available_only:
-            products = [p for p in products if p.is_available]
+            produtos = [p for p in produtos if p.esta_disponivel]
         if category:
-            products = [p for p in products if p.category == category]
-        products.sort(key=lambda p: (p.sort_order, p.name))
-        return [p.to_dict() for p in products]
+            produtos = [p for p in produtos if p.categoria == category]
+        produtos.sort(key=lambda p: (p.ordem, p.nome))
+        return [p.to_dict() for p in produtos]
 
     def list_all_products(
         self,
@@ -328,51 +369,40 @@ class ProductService:
         search: str | None = None,
         category: str | None = None,
     ) -> dict:
-        """
-        List all available products from active restaurants.
-
-        Uses MongoDB aggregation pipeline for server-side filtering
-        and pagination (replaces the old O(n*m) Python-side loop).
-        """
-        result = self.repo.list_all_products_aggregation(
+        """Lista todos os produtos disponíveis via agregação."""
+        result = self.repo.listar_todos_produtos_agregacao(
             page=page, page_size=page_size, search=search, category=category,
         )
         return result.to_dict()
 
 
 class StatsService:
-    """Service to compute dashboard statistics for a restaurant."""
+    """Serviço para computar estatísticas do dashboard para um restaurante."""
 
     def __init__(
         self,
-        restaurant_repo: RestaurantRepository | None = None,
-        order_repo: OrderRepository | None = None,
+        restaurant_repo: RepositorioRestaurante | None = None,
+        order_repo: RepositorioPedido | None = None,
     ) -> None:
-        self.restaurant_repo = restaurant_repo or RestaurantRepository()
-        self.order_repo = order_repo or OrderRepository()
+        self.restaurant_repo = restaurant_repo or RepositorioRestaurante()
+        self.order_repo = order_repo or RepositorioPedido()
 
-    def _verify_ownership(self, restaurant_id: str, owner_id: str) -> Restaurant:
-        """Verify restaurant exists and is owned by the user."""
-        restaurant = self.restaurant_repo.find_by_id(restaurant_id)
-        if not restaurant:
+    def _verify_ownership(self, restaurant_id: str, owner_id: str) -> Restaurante:
+        """Verifica se o restaurante existe e pertence ao dono."""
+        restaurante = self.restaurant_repo.find_by_id(restaurant_id)
+        if not restaurante:
             raise ResourceNotFoundError('Restaurante')
-        if str(restaurant.owner_id) != owner_id:
+        if str(restaurante.dono_id) != owner_id:
             raise OwnershipError()
-        return restaurant
+        return restaurante
 
     def get_dashboard_stats(self, restaurant_id: str, owner_id: str) -> dict:
-        """
-        Get comprehensive dashboard statistics via single aggregation.
+        """Obtém estatísticas agregadas do dashboard."""
+        restaurante = self._verify_ownership(restaurant_id, owner_id)
+        stats = self.order_repo.obter_estatisticas_dashboard(restaurant_id)
 
-        Replaces the old approach of N+1 queries and Python-side iteration.
-        """
-        restaurant = self._verify_ownership(restaurant_id, owner_id)
-
-        stats = self.order_repo.get_dashboard_stats(restaurant_id)
-
-        # Add product counts from restaurant document
-        stats['total_products'] = len(restaurant.products)
-        stats['available_products'] = sum(1 for p in restaurant.products if p.is_available)
+        stats['total_products'] = len(restaurante.produtos)
+        stats['available_products'] = sum(1 for p in restaurante.produtos if p.esta_disponivel)
 
         return stats
 
@@ -386,101 +416,106 @@ class StatsService:
         date_from: str | None = None,
         date_to: str | None = None,
     ) -> dict:
-        """Get paginated order history with filters."""
+        """Obtém histórico de pedidos paginado com filtros."""
         self._verify_ownership(restaurant_id, owner_id)
 
-        return self.order_repo.get_order_history(
-            restaurant_id=restaurant_id,
-            page=page,
-            page_size=page_size,
-            status_filter=status_filter,
-            date_from=date_from,
-            date_to=date_to,
+        return self.order_repo.obter_historico_pedidos(
+            restaurante_id=restaurant_id,
+            pagina=page,
+            tamanho_pagina=page_size,
+            filtro_status=status_filter,
+            data_inicio=date_from,
+            data_fim=date_to,
         )
 
 
 class CouponService:
-    """Service for managing restaurant coupons/promotions."""
+    """Serviço para gerenciar cupons/promoções do restaurante."""
 
-    def __init__(self, restaurant_repo: RestaurantRepository | None = None) -> None:
-        self.repo = restaurant_repo or RestaurantRepository()
+    def __init__(self, restaurant_repo: RepositorioRestaurante | None = None) -> None:
+        self.repo = restaurant_repo or RepositorioRestaurante()
 
-    def _get_restaurant_for_owner(self, restaurant_id: str, owner_id: str) -> Restaurant:
-        """Helper: fetch restaurant and verify ownership."""
-        restaurant = self.repo.find_by_id(restaurant_id)
-        if not restaurant:
+    def _get_restaurant_for_owner(self, restaurant_id: str, owner_id: str) -> Restaurante:
+        """Helper: busca restaurante e verifica posse."""
+        restaurante = self.repo.find_by_id(restaurant_id)
+        if not restaurante:
             raise ResourceNotFoundError('Restaurante')
-        if str(restaurant.owner_id) != owner_id:
+        if str(restaurante.dono_id) != owner_id:
             raise OwnershipError()
-        return restaurant
+        return restaurante
 
     def add_coupon(self, restaurant_id: str, owner_id: str, data: dict) -> dict:
-        """Add a coupon to a restaurant."""
-        restaurant = self._get_restaurant_for_owner(restaurant_id, owner_id)
+        """Adiciona um cupom a um restaurante."""
+        restaurante = self._get_restaurant_for_owner(restaurant_id, owner_id)
 
-        code = data['code'].upper().strip()
-        if any(c.code == code for c in restaurant.coupons):
-            raise ValueError(f"Cupom '{code}' já existe.")
+        codigo = data['codigo'].upper().strip()
+        if any(c.codigo == codigo for c in restaurante.cupons):
+            raise ValueError(f"Cupom '{codigo}' já existe.")
 
-        coupon = Coupon(
+        cupom = Cupom(
             _id=ObjectId(),
-            code=code,
-            description=sanitize_input(data.get('description', '')),
-            discount_type=data['discount_type'],
-            discount_value=Decimal(str(data['discount_value'])),
-            min_order=Decimal(str(data.get('min_order', 0))),
-            max_uses=data.get('max_uses', 0),
-            is_active=data.get('is_active', True),
+            codigo=codigo,
+            descricao=sanitize_input(data.get('descricao', '')),
+            tipo_desconto=data['tipo_desconto'],
+            valor_desconto=Decimal(str(data['valor_desconto'])),
+            pedido_minimo=Decimal(str(data.get('pedido_minimo', 0))),
+            max_usos=data.get('max_usos', 0),
+            esta_ativo=data.get('esta_ativo', True),
         )
-        if data.get('valid_until'):
-            coupon.valid_until = datetime.fromisoformat(data['valid_until'])
+        if data.get('valido_ate'):
+            cupom.valido_ate = datetime.fromisoformat(data['valido_ate'])
 
-        restaurant.coupons.append(coupon)
-        self.repo.save(restaurant)
+        restaurante.cupons.append(cupom)
+        self.repo.save(restaurante)
 
-        logger.info("Coupon '%s' added to restaurant %s", code, restaurant_id)
-        return coupon.to_dict()
+        logger.info("Cupom '%s' adicionado ao restaurante %s", codigo, restaurant_id)
+        return cupom.to_dict()
 
     def update_coupon(
         self, restaurant_id: str, coupon_id: str, owner_id: str, data: dict,
     ) -> dict:
-        """Update a coupon within a restaurant."""
-        restaurant = self._get_restaurant_for_owner(restaurant_id, owner_id)
+        """Atualiza um cupom dentro de um restaurante."""
+        restaurante = self._get_restaurant_for_owner(restaurant_id, owner_id)
 
-        coupon = next((c for c in restaurant.coupons if str(c._id) == coupon_id), None)
-        if not coupon:
+        cupom = next((c for c in restaurante.cupons if str(c._id) == coupon_id), None)
+        if not cupom:
             raise ResourceNotFoundError('Cupom')
 
-        for field in ('description', 'discount_type', 'discount_value', 'min_order', 'max_uses', 'is_active'):
+        campos_permitidos = [
+            'descricao', 'tipo_desconto', 'valor_desconto', 
+            'pedido_minimo', 'max_usos', 'esta_ativo'
+        ]
+
+        for field in campos_permitidos:
             if field in data:
-                if field in ('discount_value', 'min_order'):
-                    setattr(coupon, field, Decimal(str(data[field])))
-                elif field == 'description':
-                    coupon.description = sanitize_input(data[field])
+                if field in ('valor_desconto', 'pedido_minimo'):
+                    setattr(cupom, field, Decimal(str(data[field])))
+                elif field == 'descricao':
+                    cupom.descricao = sanitize_input(data[field])
                 else:
-                    setattr(coupon, field, data[field])
+                    setattr(cupom, field, data[field])
 
-        if 'valid_until' in data:
-            coupon.valid_until = datetime.fromisoformat(data['valid_until']) if data['valid_until'] else None
+        if 'valido_ate' in data:
+            cupom.valido_ate = datetime.fromisoformat(data['valido_ate']) if data['valido_ate'] else None
 
-        self.repo.save(restaurant)
-        return coupon.to_dict()
+        self.repo.save(restaurante)
+        return cupom.to_dict()
 
     def remove_coupon(self, restaurant_id: str, coupon_id: str, owner_id: str) -> bool:
-        """Remove a coupon from a restaurant."""
-        restaurant = self._get_restaurant_for_owner(restaurant_id, owner_id)
+        """Remove um cupom de um restaurante."""
+        restaurante = self._get_restaurant_for_owner(restaurant_id, owner_id)
 
-        coupon = next((c for c in restaurant.coupons if str(c._id) == coupon_id), None)
-        if not coupon:
+        cupom = next((c for c in restaurante.cupons if str(c._id) == coupon_id), None)
+        if not cupom:
             raise ResourceNotFoundError('Cupom')
 
-        restaurant.coupons.remove(coupon)
-        self.repo.save(restaurant)
+        restaurante.cupons.remove(cupom)
+        self.repo.save(restaurante)
 
-        logger.info("Coupon %s removed from restaurant %s", coupon_id, restaurant_id)
+        logger.info("Cupom %s removido do restaurante %s", coupon_id, restaurant_id)
         return True
 
     def list_coupons(self, restaurant_id: str, owner_id: str) -> list[dict]:
-        """List all coupons for a restaurant."""
-        restaurant = self._get_restaurant_for_owner(restaurant_id, owner_id)
-        return [c.to_dict() for c in restaurant.coupons]
+        """Lista todos os cupons de um restaurante."""
+        restaurante = self._get_restaurant_for_owner(restaurant_id, owner_id)
+        return [c.to_dict() for c in restaurante.cupons]

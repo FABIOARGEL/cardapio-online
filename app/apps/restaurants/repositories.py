@@ -1,5 +1,5 @@
 """
-Restaurant repository — centralized database access for Restaurant documents.
+Repositório de Restaurantes — acesso centralizado ao banco para documentos Restaurante.
 """
 from __future__ import annotations
 
@@ -8,54 +8,54 @@ import logging
 from bson import ObjectId
 
 from apps.core.base_repository import BaseRepository, PaginatedResult
-from apps.core.enums import RestaurantStatus
-from apps.restaurants.documents import Restaurant
+from apps.core.enums import StatusRestaurante
+from apps.restaurants.documents import Restaurante
 
 logger = logging.getLogger(__name__)
 
 
-class RestaurantRepository(BaseRepository[Restaurant]):
-    """Repository for Restaurant document queries."""
+class RepositorioRestaurante(BaseRepository[Restaurante]):
+    """Repositório para consultas no documento Restaurante."""
 
-    document_class = Restaurant
+    document_class = Restaurante
 
-    def find_active_by_id(self, restaurant_id: str) -> Restaurant | None:
-        """Find an active restaurant by ID."""
-        return self.find_one(id=restaurant_id, status=RestaurantStatus.ACTIVE)
+    def buscar_ativo_por_id(self, restaurante_id: str) -> Restaurante | None:
+        """Busca um restaurante ativo por ID."""
+        return self.find_one(id=restaurante_id, status=StatusRestaurante.ATIVO)
 
-    def find_by_owner(self, owner_id: str) -> list[Restaurant]:
-        """Find all restaurants owned by a user."""
-        return self.find_many(owner_id=ObjectId(owner_id))
+    def buscar_por_dono(self, dono_id: str) -> list[Restaurante]:
+        """Busca todos os restaurantes de um usuário."""
+        return self.find_many(dono_id=ObjectId(dono_id))
 
-    def find_by_slug(self, slug: str) -> Restaurant | None:
-        """Find a restaurant by URL slug."""
+    def buscar_por_slug(self, slug: str) -> Restaurante | None:
+        """Busca um restaurante pela URL slug."""
         return self.find_one(slug=slug)
 
-    def find_by_id_and_owner(self, restaurant_id: str, owner_id: str) -> Restaurant | None:
-        """Find a restaurant by ID verifying ownership."""
-        return self.find_one(id=restaurant_id, owner_id=ObjectId(owner_id))
+    def buscar_por_id_e_dono(self, restaurante_id: str, dono_id: str) -> Restaurante | None:
+        """Busca um restaurante por ID verificando o dono."""
+        return self.find_one(id=restaurante_id, dono_id=ObjectId(dono_id))
 
-    def slug_exists(self, slug: str) -> bool:
-        """Check if a slug is already taken."""
+    def slug_existe(self, slug: str) -> bool:
+        """Verifica se uma slug já está em uso."""
         return self.exists(slug=slug)
 
-    def list_active(
+    def listar_ativos(
         self,
         page: int = 1,
         page_size: int = 12,
         search: str | None = None,
         category: str | None = None,
     ) -> PaginatedResult:
-        """List active restaurants with search and filtering."""
-        filters: dict = {'status': RestaurantStatus.ACTIVE}
+        """Lista restaurantes ativos com busca e filtros."""
+        filters: dict = {'status': StatusRestaurante.ATIVO}
         if search:
             filters['__raw__'] = {'$text': {'$search': search}}
         if category:
-            filters['products__category'] = category
+            filters['produtos__categoria'] = category
 
         return self.paginate(page=page, page_size=page_size, **filters)
 
-    def list_all_products_aggregation(
+    def listar_todos_produtos_agregacao(
         self,
         page: int = 1,
         page_size: int = 24,
@@ -63,49 +63,47 @@ class RestaurantRepository(BaseRepository[Restaurant]):
         category: str | None = None,
     ) -> PaginatedResult:
         """
-        List all available products from active restaurants using
-        MongoDB aggregation pipeline (server-side filtering).
-
-        This replaces the previous O(n*m) Python-side iteration.
+        Lista todos os produtos disponíveis de restaurantes ativos usando
+        MongoDB aggregation pipeline.
         """
-        # Build the aggregation pipeline
+        # Constroi o pipeline de agregação
         pipeline: list[dict] = [
-            {'$match': {'status': RestaurantStatus.ACTIVE}},
-            {'$unwind': '$products'},
-            {'$match': {'products.is_available': True}},
+            {'$match': {'status': StatusRestaurante.ATIVO}},
+            {'$unwind': '$produtos'},
+            {'$match': {'produtos.esta_disponivel': True}},
         ]
 
         if category and category != 'all':
-            pipeline.append({'$match': {'products.category': category}})
+            pipeline.append({'$match': {'produtos.categoria': category}})
 
         if search:
             pipeline.append({'$match': {
-                'products.name': {'$regex': search, '$options': 'i'},
+                'produtos.nome': {'$regex': search, '$options': 'i'},
             }})
 
-        # Count total matching products
+        # Conta total de produtos correspondentes
         count_pipeline = pipeline + [{'$count': 'total'}]
         count_result = self.aggregate(count_pipeline)
         total = count_result[0]['total'] if count_result else 0
 
-        # Sort, paginate, and project
+        # Ordena, pagina e projeta
         pipeline.extend([
-            {'$sort': {'products.created_at': -1}},
+            {'$sort': {'produtos.criado_em': -1}},
             {'$skip': (page - 1) * page_size},
             {'$limit': page_size},
             {'$project': {
                 '_id': 0,
-                'id': {'$toString': '$products._id'},
-                'name': '$products.name',
-                'description': {'$ifNull': ['$products.description', '']},
-                'price': {'$toDouble': '$products.price'},
-                'category': '$products.category',
-                'image_url': {'$ifNull': ['$products.image_url', '']},
-                'images': {'$ifNull': ['$products.images', []]},
-                'is_available': '$products.is_available',
-                'restaurant_id': {'$toString': '$_id'},
-                'restaurant_name': '$name',
-                'restaurant_slug': '$slug',
+                'id': {'$toString': '$produtos._id'},
+                'nome': '$produtos.nome',
+                'descricao': {'$ifNull': ['$produtos.descricao', '']},
+                'preco': {'$toDouble': '$produtos.preco'},
+                'categoria': '$produtos.categoria',
+                'imagem_url': {'$ifNull': ['$produtos.imagem_url', '']},
+                'imagens': {'$ifNull': ['$produtos.imagens', []]},
+                'esta_disponivel': '$produtos.esta_disponivel',
+                'restaurante_id': {'$toString': '$_id'},
+                'restaurante_nome': '$nome',
+                'restaurante_slug': '$slug',
             }},
         ])
 
