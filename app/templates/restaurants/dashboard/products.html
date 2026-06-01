@@ -6,7 +6,7 @@
     .product-row { transition: all 0.2s ease; }
     .product-row:hover { background: rgba(255,255,255,0.03); }
     .toggle-switch { position:relative; width:44px; height:24px; }
-    .toggle-switch input { opacity:0; width:0; height:0; }
+    .toggle-switch input { opacidade:0; width:0; height:0; }
     .toggle-slider { position:absolute; cursor:pointer; inset:0; background:#334155; border-radius:12px; transition:0.3s; }
     .toggle-slider:before { position:absolute; content:""; height:18px; width:18px; left:3px; bottom:3px; background:white; border-radius:50%; transition:0.3s; }
     .toggle-switch input:checked+.toggle-slider { background:#f97316; }
@@ -36,10 +36,10 @@
             <!-- Category Filter -->
             <div class="flex gap-2 mb-6 overflow-x-auto">
                 <button onclick="filterCategory(null)" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-red-100 text-red-500 border border-red-200">Todos</button>
-                <button onclick="filterCategory('main')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100/50 text-gray-500 border border-gray-200/50">Pratos</button>
-                <button onclick="filterCategory('appetizer')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100/50 text-gray-500 border border-gray-200/50">Entradas</button>
-                <button onclick="filterCategory('dessert')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100/50 text-gray-500 border border-gray-200/50">Sobremesas</button>
-                <button onclick="filterCategory('drink')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100/50 text-gray-500 border border-gray-200/50">Bebidas</button>
+                <button onclick="filterCategory('principal')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100/50 text-gray-500 border border-gray-200/50">Pratos</button>
+                <button onclick="filterCategory('entrada')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100/50 text-gray-500 border border-gray-200/50">Entradas</button>
+                <button onclick="filterCategory('sobremesa')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100/50 text-gray-500 border border-gray-200/50">Sobremesas</button>
+                <button onclick="filterCategory('bebida')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100/50 text-gray-500 border border-gray-200/50">Bebidas</button>
                 <button onclick="filterCategory('combo')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100/50 text-gray-500 border border-gray-200/50">Combos</button>
             </div>
 
@@ -96,10 +96,10 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-600 mb-1">Categoria *</label>
                     <select id="pf-category" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400 transition-colors">
-                        <option value="main">Prato</option>
-                        <option value="appetizer">Entrada</option>
-                        <option value="dessert">Sobremesa</option>
-                        <option value="drink">Bebida</option>
+                        <option value="principal">Prato</option>
+                        <option value="entrada">Entrada</option>
+                        <option value="sobremesa">Sobremesa</option>
+                        <option value="bebida">Bebida</option>
                         <option value="combo">Combo</option>
                     </select>
                 </div>
@@ -130,7 +130,7 @@
 
 {% block extra_js %}
 <script>
-    const CL = {appetizer:'Entrada',main:'Prato',dessert:'Sobremesa',drink:'Bebida',combo:'Combo'};
+    const CL = {entrada:'Entrada',principal:'Prato',sobremesa:'Sobremesa',bebida:'Bebida',combo:'Combo'};
     let currentCategory = null;
     let allProducts = [];
 
@@ -159,7 +159,7 @@
         try {
             const res = await API.get(`/api/restaurants/${rid}/owner-detail/`);
             const data = await res.json();
-            allProducts = data.products || [];
+            allProducts = data.produtos || [];
             renderProducts();
         } catch (e) {
             console.error('Error loading products:', e);
@@ -168,7 +168,7 @@
 
     function renderProducts() {
         let products = allProducts;
-        if (currentCategory) products = products.filter(p => p.category === currentCategory);
+        if (currentCategory) products = products.filter(p => p.categoria === currentCategory);
 
         const tbody = document.getElementById('products-tbody');
         const empty = document.getElementById('products-empty');
@@ -185,25 +185,25 @@
             <tr class="product-row border-b border-gray-200">
                 <td class="px-5 py-3">
                     <div class="flex items-center gap-3">
-                        ${getImageUrl(p.image_url) ? `<img src="${getImageUrl(p.image_url)}" class="w-10 h-10 rounded-lg object-cover" alt="" onerror="this.outerHTML='<div class=\\'w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center\\'><i data-lucide=\\'image\\' class=\\'w-4 h-4 text-gray-400\\'></i></div>'">` : '<div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center"><i data-lucide="image" class="w-4 h-4 text-gray-400"></i></div>'}
+                        ${getImageUrl(p.imagem_url) ? `<img src="${getImageUrl(p.imagem_url)}" class="w-10 h-10 rounded-lg object-cover" alt="" onerror="this.outerHTML='<div class=\\'w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center\\'><i data-lucide=\\'image\\' class=\\'w-4 h-4 text-gray-400\\'></i></div>'">` : '<div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center"><i data-lucide="image" class="w-4 h-4 text-gray-400"></i></div>'}
                         <div>
-                            <p class="text-sm font-medium text-gray-700">${p.name}</p>
-                            <p class="text-xs text-gray-400 truncate max-w-[200px]">${p.description || ''}</p>
+                            <p class="text-sm font-medium text-gray-700">${p.nome}</p>
+                            <p class="text-xs text-gray-400 truncate max-w-[200px]">${p.descricao || ''}</p>
                         </div>
                     </div>
                 </td>
                 <td class="px-5 py-3 hidden md:table-cell">
-                    <span class="px-2 py-1 rounded-lg text-xs bg-gray-100/50 text-gray-500">${CL[p.category]||p.category}</span>
+                    <span class="px-2 py-1 rounded-lg text-xs bg-gray-100/50 text-gray-500">${CL[p.categoria]||p.categoria}</span>
                 </td>
                 <td class="px-5 py-3">
-                    <span class="text-sm font-medium text-red-500">${formatMoney(p.price)}</span>
+                    <span class="text-sm font-medium text-red-500">${formatMoney(p.preco)}</span>
                 </td>
                 <td class="px-5 py-3 hidden sm:table-cell">
-                    <span class="text-sm text-gray-500">${p.stock === -1 ? '∞' : p.stock}</span>
+                    <span class="text-sm text-gray-500">${p.estoque === -1 ? '∞' : p.estoque}</span>
                 </td>
                 <td class="px-5 py-3 text-center">
                     <label class="toggle-switch inline-block">
-                        <input type="checkbox" ${p.is_available ? 'checked' : ''} onchange="toggleAvailability('${p.id}', this.checked)">
+                        <input type="checkbox" ${p.esta_disponivel ? 'checked' : ''} onchange="toggleAvailability('${p.id}', this.checked)">
                         <span class="toggle-slider"></span>
                     </label>
                 </td>
@@ -212,7 +212,7 @@
                         <button onclick="editProduct('${p.id}')" class="p-1.5 rounded-lg hover:bg-gray-200 transition-colors" title="Editar">
                             <i data-lucide="pencil" class="w-4 h-4 text-gray-500"></i>
                         </button>
-                        <button onclick="deleteProduct('${p.id}','${p.name}')" class="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors" title="Remover">
+                        <button onclick="deleteProduct('${p.id}','${p.nome}')" class="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors" title="Remover">
                             <i data-lucide="trash-2" class="w-4 h-4 text-red-400"></i>
                         </button>
                     </div>
@@ -225,7 +225,7 @@
     async function toggleAvailability(pid, available) {
         const rid = DashboardNav.getRestaurantId();
         try {
-            await API.put(`/api/restaurants/${rid}/products/${pid}/`, { is_available: available });
+            await API.put(`/api/restaurants/${rid}/products/${pid}/`, { esta_disponivel: available });
             showToast(available ? 'Produto ativado' : 'Produto desativado');
             loadProducts();
         } catch { showToast('Erro', 'error'); }
@@ -244,12 +244,12 @@
     function openProductModal(product = null) {
         document.getElementById('product-modal-title').textContent = product ? 'Editar Produto' : 'Novo Produto';
         document.getElementById('pf-id').value = product ? product.id : '';
-        document.getElementById('pf-name').value = product ? product.name : '';
-        document.getElementById('pf-desc').value = product ? (product.description || '') : '';
-        document.getElementById('pf-price').value = product ? MoneyHelper.format(product.price) : '';
-        document.getElementById('pf-category').value = product ? product.category : 'main';
-        document.getElementById('pf-stock').value = product ? product.stock : -1;
-        document.getElementById('pf-order').value = product ? product.sort_order : 0;
+        document.getElementById('pf-name').value = product ? product.nome : '';
+        document.getElementById('pf-desc').value = product ? (product.descricao || '') : '';
+        document.getElementById('pf-price').value = product ? MoneyHelper.format(product.preco) : '';
+        document.getElementById('pf-category').value = product ? product.categoria : 'principal';
+        document.getElementById('pf-stock').value = product ? product.estoque : -1;
+        document.getElementById('pf-order').value = product ? product.ordem : 0;
         document.getElementById('pf-image').value = '';
         document.getElementById('pf-error').classList.add('hidden');
 
@@ -262,8 +262,8 @@
                 }
             });
             preview.classList.remove('hidden');
-        } else if (product && getImageUrl(product.image_url)) {
-            preview.innerHTML = `<img src="${getImageUrl(product.image_url)}" class="img-preview w-full h-20 object-cover rounded-lg" alt="Preview">`;
+        } else if (product && getImageUrl(product.imagem_url)) {
+            preview.innerHTML = `<img src="${getImageUrl(product.imagem_url)}" class="img-preview w-full h-20 object-cover rounded-lg" alt="Preview">`;
             preview.classList.remove('hidden');
         } else {
             preview.classList.add('hidden');
@@ -311,12 +311,12 @@
         btn.disabled = true; btn.textContent = 'Salvando...'; errDiv.classList.add('hidden');
 
         const formData = new FormData();
-        formData.append('name', document.getElementById('pf-name').value);
-        formData.append('description', document.getElementById('pf-desc').value);
-        formData.append('price', MoneyHelper.unmask(document.getElementById('pf-price').value));
-        formData.append('category', document.getElementById('pf-category').value);
-        formData.append('stock', document.getElementById('pf-stock').value);
-        formData.append('sort_order', document.getElementById('pf-order').value);
+        formData.append('nome', document.getElementById('pf-name').value);
+        formData.append('descricao', document.getElementById('pf-desc').value);
+        formData.append('preco', MoneyHelper.unmask(document.getElementById('pf-price').value));
+        formData.append('categoria', document.getElementById('pf-category').value);
+        formData.append('estoque', document.getElementById('pf-stock').value);
+        formData.append('ordem', document.getElementById('pf-order').value);
 
         const imageFiles = document.getElementById('pf-image').files;
         if (imageFiles.length > 0) {

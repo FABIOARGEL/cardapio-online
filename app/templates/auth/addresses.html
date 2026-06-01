@@ -116,18 +116,18 @@
         if (addresses.length === 0) { list.innerHTML = ''; empty.classList.remove('hidden'); return; }
         empty.classList.add('hidden');
         list.innerHTML = addresses.map((addr, idx) => `
-            <div class="bg-white rounded-2xl p-5 relative group fade-in border shadow-card ${addr.is_default ? 'border-red-200 bg-red-50/20' : 'border-gray-100'}">
-                ${addr.is_default ? '<span class="absolute top-4 right-4 px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-500 rounded-md">Principal</span>' : ''}
+            <div class="bg-white rounded-2xl p-5 relative group fade-in border shadow-card ${addr.padrao ? 'border-red-200 bg-red-50/20' : 'border-gray-100'}">
+                ${addr.padrao ? '<span class="absolute top-4 right-4 px-2 py-1 text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-500 rounded-md">Principal</span>' : ''}
                 <div class="flex items-start gap-3">
                     <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
                         <i data-lucide="home" class="w-5 h-5 text-gray-400"></i>
                     </div>
                     <div>
-                        <h3 class="font-medium text-gray-800 mb-1">${addr.label || 'Endereço'}</h3>
+                        <h3 class="font-medium text-gray-800 mb-1">${addr.rotulo || 'Endereço'}</h3>
                         <p class="text-sm text-gray-500 leading-relaxed">
-                            ${addr.street}, ${addr.number} ${addr.complement ? ' - ' + addr.complement : ''}<br>
-                            ${addr.neighborhood}<br>
-                            ${addr.city} - ${addr.state}, ${addr.zip_code}
+                            ${addr.rua}, ${addr.numero} ${addr.complemento ? ' - ' + addr.complemento : ''}<br>
+                            ${addr.bairro}<br>
+                            ${addr.cidade} - ${addr.estado}, ${addr.cep}
                         </p>
                     </div>
                 </div>
@@ -148,7 +148,7 @@
         e.preventDefault();
         const btn = document.getElementById('btn-save-addr');
         btn.textContent = 'Salvando...'; btn.disabled = true;
-        const data = { zip_code: document.getElementById('addr-cep').value, street: document.getElementById('addr-street').value, number: document.getElementById('addr-number').value, complement: document.getElementById('addr-complement').value, neighborhood: document.getElementById('addr-neighborhood').value, city: document.getElementById('addr-city').value, state: document.getElementById('addr-state').value.toUpperCase(), is_default: document.getElementById('addr-default').checked };
+        const data = { cep: document.getElementById('addr-cep').value, rua: document.getElementById('addr-street').value, numero: document.getElementById('addr-number').value, complemento: document.getElementById('addr-complement').value, bairro: document.getElementById('addr-neighborhood').value, cidade: document.getElementById('addr-city').value, estado: document.getElementById('addr-state').value.toUpperCase(), padrao: document.getElementById('addr-default').checked };
         try {
             const res = await API.post('/api/auth/addresses/', data);
             if (res.ok) { showToast('Endereço adicionado com sucesso!'); closeAddressModal(); loadAddresses(); }
@@ -166,12 +166,12 @@
     loadAddresses();
     
     CEPHelper.init('addr-cep', {
-        street: 'addr-street',
-        neighborhood: 'addr-neighborhood',
-        city: 'addr-city',
-        state: 'addr-state',
-        complement: 'addr-complement',
-        number: 'addr-number'
+        rua: 'addr-street',
+        bairro: 'addr-neighborhood',
+        cidade: 'addr-city',
+        estado: 'addr-state',
+        complemento: 'addr-complement',
+        numero: 'addr-number'
     });
 </script>
 {% endblock %}

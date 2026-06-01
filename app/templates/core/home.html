@@ -71,16 +71,16 @@
             <button onclick="filterCategory(null)" class="category-btn active px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-red-500 text-white shadow-sm" data-category="all">
                 <i data-lucide="grid-3x3" class="w-4 h-4 inline mr-1"></i>Todos
             </button>
-            <button onclick="filterCategory('appetizer')" class="category-btn px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50" data-category="appetizer">
+            <button onclick="filterCategory('entrada')" class="category-btn px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50" data-category="entrada">
                 <i data-lucide="salad" class="w-4 h-4 inline mr-1"></i>Entradas
             </button>
-            <button onclick="filterCategory('main')" class="category-btn px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50" data-category="main">
+            <button onclick="filterCategory('principal')" class="category-btn px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50" data-category="principal">
                 <i data-lucide="beef" class="w-4 h-4 inline mr-1"></i>Pratos
             </button>
-            <button onclick="filterCategory('drink')" class="category-btn px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50" data-category="drink">
+            <button onclick="filterCategory('bebida')" class="category-btn px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50" data-category="bebida">
                 <i data-lucide="cup-soda" class="w-4 h-4 inline mr-1"></i>Bebidas
             </button>
-            <button onclick="filterCategory('dessert')" class="category-btn px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50" data-category="dessert">
+            <button onclick="filterCategory('sobremesa')" class="category-btn px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50" data-category="sobremesa">
                 <i data-lucide="cake-slice" class="w-4 h-4 inline mr-1"></i>Sobremesas
             </button>
             <button onclick="filterCategory('combo')" class="category-btn px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50" data-category="combo">
@@ -151,36 +151,36 @@
     }
 
     function renderProductCard(p) {
-        const imgUrl = getImageUrl(p.image_url);
-        const priceFormatted = formatMoney(p.price);
+        const imgUrl = getImageUrl(p.imagem_url);
+        const priceFormatted = formatMoney(p.preco || 0);
 
         return `
             <div class="product-card rounded-2xl overflow-hidden flex flex-col h-full fade-in relative group">
-                <div class="product-img h-44 bg-gray-100 relative overflow-hidden flex-shrink-0 cursor-pointer" onclick="window.location.href='/restaurante/${p.restaurant_slug}/'">
+                <div class="product-img h-44 bg-gray-100 relative overflow-hidden flex-shrink-0 cursor-pointer" onclick="window.location.href='/restaurante/${p.restaurante_slug || p.restaurant_slug}/'">
                     ${imgUrl
-                        ? `<img src="${imgUrl}" alt="${p.name}" class="w-full h-full object-cover"
+                        ? `<img src="${imgUrl}" alt="${p.nome}" class="w-full h-full object-cover"
                                 onerror="this.parentElement.innerHTML='<div class=\\'product-fallback w-full h-full flex items-center justify-center\\'><i data-lucide=\\'image\\' class=\\'w-12 h-12 text-gray-300\\'></i></div>'; lucide.createIcons();">`
                         : `<div class="product-fallback w-full h-full flex items-center justify-center">
                             <i data-lucide="image" class="w-12 h-12 text-gray-300"></i>
                            </div>`
                     }
-                    ${p.is_available === false
+                    ${p.esta_disponivel === false
                         ? '<div class="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center"><span class="px-4 py-1.5 bg-red-500 text-white text-xs font-bold rounded-lg uppercase tracking-wide">Esgotado</span></div>'
                         : ''
                     }
                 </div>
                 <div class="p-5 flex flex-col flex-grow">
-                    <a href="/restaurante/${p.restaurant_slug}/" class="text-xs text-red-500 font-medium mb-1.5 hover:underline truncate flex items-center gap-1">
-                        <i data-lucide="store" class="w-3.5 h-3.5"></i> ${p.restaurant_name}
+                    <a href="/restaurante/${p.restaurante_slug || p.restaurant_slug}/" class="text-xs text-red-500 font-medium mb-1.5 hover:underline truncate flex items-center gap-1">
+                        <i data-lucide="store" class="w-3.5 h-3.5"></i> ${p.restaurante_nome}
                     </a>
-                    <h3 class="font-bold text-gray-800 text-lg mb-2 line-clamp-2">${p.name}</h3>
-                    <p class="text-sm text-gray-500 line-clamp-2 mb-4 flex-grow">${p.description || ''}</p>
+                    <h3 class="font-bold text-gray-800 text-lg mb-2 line-clamp-2">${p.nome}</h3>
+                    <p class="text-sm text-gray-500 line-clamp-2 mb-4 flex-grow">${p.descricao || ''}</p>
                     <div class="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
                         <span class="text-xl font-extrabold text-red-500">${priceFormatted}</span>
                         <button
-                            onclick='addToCart(${JSON.stringify({id: p.id, name: p.name, price: parseFloat(p.price || 0), image_url: p.image_url}).replace(/'/g, "\\'")}, "${p.restaurant_id}", "${p.restaurant_name.replace(/'/g, "\\'")}")'
+                            onclick='addToCart(${JSON.stringify({id: p.id, nome: p.nome, preco: parseFloat(p.preco || 0), image_url: p.imagem_url}).replace(/"/g, "&quot;").replace(/'/g, "&#39;")}, "${p.restaurante_id}", "${(p.restaurante_nome || "").replace(/'/g, "&#39;")}")'
                             class="add-btn btn-primary px-3 py-2 rounded-xl text-sm text-white font-medium flex items-center gap-2 shadow-md shadow-red-500/20 transition-all hover:scale-105 active:scale-95"
-                            ${p.is_available === false ? 'disabled style="opacity: 0.4; cursor: not-allowed; pointer-events: none;"' : ''}
+                            ${p.esta_disponivel === false ? 'disabled style="opacidade: 0.4; cursor: not-allowed; pointer-events: none;"' : ''}
                         >
                             <i data-lucide="plus" class="w-4 h-4"></i> Adicionar
                         </button>

@@ -29,7 +29,7 @@
     .google-btn-custom:active { transform: translateY(0); }
     .google-btn-custom svg { flex-shrink: 0; }
     .google-btn-custom:disabled {
-        opacity: 0.6;
+        opacidade: 0.6;
         cursor: not-allowed;
         transform: none !important;
     }
@@ -129,7 +129,7 @@
                 Auth.setAuth(data);
                 showToast('Login realizado com sucesso!');
                 setTimeout(() => {
-                    window.location.href = data.user.role === 'owner' ? '/dashboard/' : '/';
+                    window.location.href = data.user.papel === 'dono' ? '/dashboard/' : '/';
                 }, 500);
             } else {
                 errorDiv.textContent = data.error || 'Erro ao fazer login com Google.';
@@ -226,7 +226,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     email: document.getElementById('login-email').value,
-                    password: document.getElementById('login-password').value,
+                    senha: document.getElementById('login-password').value,
                 }),
             });
             const data = await res.json();
@@ -235,7 +235,7 @@
                 Auth.setAuth(data);
                 showToast('Login realizado com sucesso!');
                 setTimeout(() => {
-                    window.location.href = data.user.role === 'owner' ? '/dashboard/' : '/';
+                    window.location.href = data.user.papel === 'dono' ? '/dashboard/' : '/';
                 }, 500);
             } else {
                 let msg = data.error || '';

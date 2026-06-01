@@ -22,7 +22,7 @@ const Auth = {
     },
     
     isAuthenticated() { return !!this.getToken(); },
-    isOwner() { const u = this.getUser(); return u && u.role === 'owner'; },
+    isOwner() { const u = this.getUser(); return u && u.papel === 'dono'; },
     
     enforcePermissions() {
         const user = this.getUser();
@@ -36,16 +36,16 @@ const Auth = {
 
         if (user) {
             if (isAuthPath) {
-                window.location.href = user.role === 'owner' ? '/dashboard/' : '/';
+                window.location.href = user.papel === 'dono' ? '/dashboard/' : '/';
                 return;
             }
             
-            if (user.role === 'owner') {
+            if (user.papel === 'dono') {
                 if (isCustomerPath || isHomePath) {
                     window.location.href = '/dashboard/';
                     return;
                 }
-            } else if (user.role === 'customer') {
+            } else if (user.papel === 'cliente') {
                 if (isOwnerPath) {
                     window.location.href = '/';
                     return;
@@ -74,9 +74,9 @@ const Auth = {
         if (user && authBtns && userMenu) {
             authBtns.classList.add('hidden');
             userMenu.classList.remove('hidden');
-            if (userName) userName.textContent = user.name;
+            if (userName) userName.textContent = user.nome;
             
-            if (user.role === 'owner') {
+            if (user.papel === 'dono') {
                 if (dashboardLink) dashboardLink.classList.remove('hidden');
                 if (profileLink) profileLink.classList.add('hidden');
                 if (ordersLink) ordersLink.classList.add('hidden');

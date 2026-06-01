@@ -118,7 +118,7 @@
                     ? savedId : this.restaurants[0].id;
 
                 select.innerHTML = this.restaurants.map(r =>
-                    `<option value="${r.id}" ${r.id === this.currentRestaurantId ? 'selected' : ''}>${r.name}</option>`
+                    `<option value="${r.id}" ${r.id === this.currentRestaurantId ? 'selected' : ''}>${r.nome}</option>`
                 ).join('');
 
                 localStorage.setItem('dashboard_restaurant_id', this.currentRestaurantId);
@@ -154,14 +154,14 @@
             const text = document.getElementById('sidebar-status-text');
             if (!dot || !text) return;
             const map = {
-                active: { color: 'bg-emerald-400', label: 'Aberto' },
-                inactive: { color: 'bg-gray-400', label: 'Fechado' },
-                suspended: { color: 'bg-red-400', label: 'Suspenso' },
+                ativo: { color: 'bg-emerald-400', rotulo: 'Aberto' },
+                inativo: { color: 'bg-gray-400', rotulo: 'Fechado' },
+                suspenso: { color: 'bg-red-400', rotulo: 'Suspenso' },
             };
-            const info = map[st] || map.inactive;
+            const info = map[st] || map.inativo;
             dot.className = `w-2 h-2 rounded-full ${info.color}`;
-            text.textContent = info.label;
-            text.className = st === 'active' ? 'text-emerald-500' : 'text-gray-400';
+            text.textContent = info.rotulo;
+            text.className = st === 'ativo' ? 'text-emerald-500' : 'text-gray-400';
         },
 
         highlightActive() {

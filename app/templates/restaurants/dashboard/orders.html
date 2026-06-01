@@ -40,15 +40,15 @@
             <!-- Status Tabs -->
             <div class="flex gap-1 mb-6 overflow-x-auto border-b border-gray-200/50 pb-0">
                 <button onclick="filterTab(null)" class="status-tab px-4 py-2.5 text-sm font-medium text-gray-500 active" data-tab="all">Todos</button>
-                <button onclick="filterTab('pending')" class="status-tab px-4 py-2.5 text-sm font-medium text-gray-500 relative" data-tab="pending">
+                <button onclick="filterTab('pendente')" class="status-tab px-4 py-2.5 text-sm font-medium text-gray-500 relative" data-tab="pendente">
                     Pendentes
                     <span id="pending-count" class="hidden ml-1 px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold"></span>
                 </button>
-                <button onclick="filterTab('confirmed')" class="status-tab px-4 py-2.5 text-sm font-medium text-gray-500" data-tab="confirmed">Confirmados</button>
-                <button onclick="filterTab('preparing')" class="status-tab px-4 py-2.5 text-sm font-medium text-gray-500" data-tab="preparing">Preparando</button>
-                <button onclick="filterTab('ready')" class="status-tab px-4 py-2.5 text-sm font-medium text-gray-500" data-tab="ready">Prontos</button>
-                <button onclick="filterTab('delivered')" class="status-tab px-4 py-2.5 text-sm font-medium text-gray-500" data-tab="delivered">Entregues</button>
-                <button onclick="filterTab('cancelled')" class="status-tab px-4 py-2.5 text-sm font-medium text-gray-500" data-tab="cancelled">Cancelados</button>
+                <button onclick="filterTab('confirmado')" class="status-tab px-4 py-2.5 text-sm font-medium text-gray-500" data-tab="confirmado">Confirmados</button>
+                <button onclick="filterTab('preparando')" class="status-tab px-4 py-2.5 text-sm font-medium text-gray-500" data-tab="preparando">Preparando</button>
+                <button onclick="filterTab('pronto')" class="status-tab px-4 py-2.5 text-sm font-medium text-gray-500" data-tab="pronto">Prontos</button>
+                <button onclick="filterTab('entregue')" class="status-tab px-4 py-2.5 text-sm font-medium text-gray-500" data-tab="entregue">Entregues</button>
+                <button onclick="filterTab('cancelado')" class="status-tab px-4 py-2.5 text-sm font-medium text-gray-500" data-tab="cancelado">Cancelados</button>
             </div>
 
             <!-- Orders List -->
@@ -87,10 +87,10 @@
 
 {% block extra_js %}
 <script>
-    const SL = {pending:'Pendente',confirmed:'Confirmado',preparing:'Preparando',ready:'Pronto',delivered:'Entregue',cancelled:'Cancelado'};
-    const SC = {pending:'bg-amber-500/20 text-amber-400',confirmed:'bg-blue-500/20 text-blue-400',preparing:'bg-violet-500/20 text-violet-400',ready:'bg-emerald-500/20 text-emerald-400',delivered:'bg-emerald-600/20 text-emerald-300',cancelled:'bg-red-500/20 text-red-400'};
-    const NS = {pending:'confirmed',confirmed:'preparing',preparing:'ready',ready:'delivered'};
-    const NL = {confirmed:'Confirmar',preparing:'Preparar',ready:'Pronto p/ entrega',delivered:'Entregar'};
+    const SL = {pendente:'Pendente',confirmado:'Confirmado',preparando:'Preparando',pronto:'Pronto',entregue:'Entregue',cancelado:'Cancelado'};
+    const SC = {pendente:'bg-amber-500/20 text-amber-400',confirmado:'bg-blue-500/20 text-blue-400',preparando:'bg-violet-500/20 text-violet-400',pronto:'bg-emerald-500/20 text-emerald-400',entregue:'bg-emerald-600/20 text-emerald-300',cancelado:'bg-red-500/20 text-red-400'};
+    const NS = {pendente:'confirmado',confirmado:'preparando',preparando:'pronto',pronto:'entregue'};
+    const NL = {confirmado:'Confirmar',preparando:'Preparar',pronto:'Pronto p/ entrega',entregue:'Entregar'};
 
     let currentFilter = null;
     let cancelOrderId = null;
@@ -127,17 +127,17 @@
             empty.classList.add('hidden');
 
             // Count pending
-            const pendingCount = d.results.filter(o => o.status === 'pending').length;
+            const pendingCount = d.results.filter(o => o.status === 'pendente').length;
             const pcEl = document.getElementById('pending-count');
             if (pendingCount > 0) { pcEl.textContent = pendingCount; pcEl.classList.remove('hidden'); }
             else { pcEl.classList.add('hidden'); }
 
             list.innerHTML = d.results.map(o => `
-                <div class="order-card bg-white border border-gray-100 shadow-card rounded-2xl p-5 fade-in ${o.status === 'pending' ? 'notification-pulse border border-red-200' : ''}">
+                <div class="order-card bg-white border border-gray-100 shadow-card rounded-2xl p-5 fade-in ${o.status === 'pendente' ? 'notification-pulse border border-red-200' : ''}">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-3">
-                            <span class="text-sm font-bold text-red-500">${o.order_number}</span>
-                            <span class="text-xs text-gray-400">${new Date(o.created_at).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>
+                            <span class="text-sm font-bold text-red-500">${o.numero_pedido}</span>
+                            <span class="text-xs text-gray-400">${new Date(o.criado_em).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="px-2.5 py-1 rounded-lg text-xs font-medium ${SC[o.status]}">${SL[o.status]}</span>
@@ -147,17 +147,17 @@
                         </div>
                     </div>
                     <div class="space-y-1 mb-3">
-                        ${o.items.slice(0,3).map(i => `<div class="flex justify-between text-sm"><span class="text-gray-600">${i.quantity}x ${i.name}</span><span class="text-gray-400">${formatMoney(i.subtotal)}</span></div>`).join('')}
-                        ${o.items.length > 3 ? `<p class="text-xs text-gray-400">+ ${o.items.length-3} ite${o.items.length-3 > 1 ? 'ns' : 'm'}</p>` : ''}
+                        ${o.itens.slice(0,3).map(i => `<div class="flex justify-between text-sm"><span class="text-gray-600">${i.quantidade}x ${i.nome}</span><span class="text-gray-400">${formatMoney(i.subtotal)}</span></div>`).join('')}
+                        ${o.itens.length > 3 ? `<p class="text-xs text-gray-400">+ ${o.itens.length-3} ite${o.itens.length-3 > 1 ? 'ns' : 'm'}</p>` : ''}
                     </div>
                     <div class="flex items-center justify-between border-t border-gray-200/50 pt-3">
                         <div class="flex items-center gap-3">
                             <span class="font-semibold text-gray-700">${formatMoney(o.total)}</span>
-                            <span class="text-xs text-gray-400">${o.delivery_method === 'delivery' ? '🛵 Entrega' : '🏪 Retirada'}</span>
+                            <span class="text-xs text-gray-400">${o.metodo_entrega === 'entrega' ? '🛵 Entrega' : '🏪 Retirada'}</span>
                         </div>
                         <div class="flex items-center gap-2">
                             ${NS[o.status] ? `<button onclick="advanceStatus('${o.id}','${NS[o.status]}')" class="btn-primary px-4 py-2 rounded-xl text-xs text-white font-medium">${NL[NS[o.status]]}</button>` : ''}
-                            ${['pending','confirmed','preparing','ready'].includes(o.status) ? `<button onclick="openCancelModal('${o.id}')" class="px-3 py-2 rounded-xl bg-red-500/10 text-red-400 text-xs hover:bg-red-500/20 transition-colors">Cancelar</button>` : ''}
+                            ${['pendente','confirmado','preparando','pronto'].includes(o.status) ? `<button onclick="openCancelModal('${o.id}')" class="px-3 py-2 rounded-xl bg-red-500/10 text-red-400 text-xs hover:bg-red-500/20 transition-colors">Cancelar</button>` : ''}
                         </div>
                     </div>
                 </div>
@@ -180,36 +180,36 @@
         try {
             const res = await API.get(`/api/orders/${oid}/`);
             const o = await res.json();
-            document.getElementById('modal-order-number').textContent = o.order_number;
+            document.getElementById('modal-order-number').textContent = o.numero_pedido;
             document.getElementById('modal-content').innerHTML = `
                 <div class="space-y-4">
                     <div class="flex items-center gap-2">
                         <span class="px-2.5 py-1 rounded-lg text-xs font-medium ${SC[o.status]}">${SL[o.status]}</span>
-                        <span class="text-xs text-gray-400">${new Date(o.created_at).toLocaleString('pt-BR')}</span>
+                        <span class="text-xs text-gray-400">${new Date(o.criado_em).toLocaleString('pt-BR')}</span>
                     </div>
                     <div>
                         <h4 class="text-xs text-gray-400 font-medium mb-2 uppercase tracking-wider">Itens do Pedido</h4>
-                        ${o.items.map(i => `
+                        ${o.itens.map(i => `
                             <div class="flex items-center gap-3 py-2 border-b border-gray-200">
-                                ${i.image_url ? `<img src="${i.image_url}" class="w-10 h-10 rounded-lg object-cover" alt="">` : '<div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center"><i data-lucide="package" class="w-4 h-4 text-gray-400"></i></div>'}
-                                <div class="flex-1"><p class="text-sm text-gray-700">${i.name}</p><p class="text-xs text-gray-400">${i.quantity}x · ${formatMoney(i.price)}</p></div>
+                                ${i.imagem_url ? `<img src="${i.imagem_url}" class="w-10 h-10 rounded-lg object-cover" alt="">` : '<div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center"><i data-lucide="package" class="w-4 h-4 text-gray-400"></i></div>'}
+                                <div class="flex-1"><p class="text-sm text-gray-700">${i.nome}</p><p class="text-xs text-gray-400">${i.quantidade}x · ${formatMoney(i.preco)}</p></div>
                                 <span class="text-sm font-medium text-gray-600">${formatMoney(i.subtotal)}</span>
                             </div>
                         `).join('')}
                         <div class="flex justify-between pt-3 mt-1"><span class="font-semibold text-gray-700">Total</span><span class="font-bold text-red-500 text-lg">${formatMoney(o.total)}</span></div>
                     </div>
-                    ${o.delivery_address ? `
+                    ${o.endereco_entrega ? `
                     <div>
                         <h4 class="text-xs text-gray-400 font-medium mb-2 uppercase tracking-wider">Endereço de Entrega</h4>
-                        <p class="text-sm text-gray-600">${o.delivery_address.street}, ${o.delivery_address.number}${o.delivery_address.complement ? ' - '+o.delivery_address.complement : ''}</p>
-                        <p class="text-sm text-gray-500">${o.delivery_address.neighborhood} · ${o.delivery_address.city}/${o.delivery_address.state}</p>
-                        ${o.delivery_address.zip_code ? `<p class="text-xs text-gray-400">CEP: ${o.delivery_address.zip_code}</p>` : ''}
+                        <p class="text-sm text-gray-600">${o.endereco_entrega.rua}, ${o.endereco_entrega.numero}${o.endereco_entrega.complemento ? ' - '+o.endereco_entrega.complemento : ''}</p>
+                        <p class="text-sm text-gray-500">${o.endereco_entrega.bairro} · ${o.endereco_entrega.cidade}/${o.endereco_entrega.estado}</p>
+                        ${o.endereco_entrega.cep ? `<p class="text-xs text-gray-400">CEP: ${o.endereco_entrega.cep}</p>` : ''}
                     </div>` : '<p class="text-sm text-gray-500"><i data-lucide="store" class="w-4 h-4 inline"></i> Retirada no local</p>'}
-                    ${o.notes ? `<div><h4 class="text-xs text-gray-400 font-medium mb-1 uppercase tracking-wider">Observações</h4><p class="text-sm text-gray-600 bg-gray-100/30 rounded-xl px-3 py-2">${o.notes}</p></div>` : ''}
+                    ${o.observacoes ? `<div><h4 class="text-xs text-gray-400 font-medium mb-1 uppercase tracking-wider">Observações</h4><p class="text-sm text-gray-600 bg-gray-100/30 rounded-xl px-3 py-2">${o.observacoes}</p></div>` : ''}
                     <div>
                         <h4 class="text-xs text-gray-400 font-medium mb-2 uppercase tracking-wider">Histórico</h4>
                         <div class="space-y-1">
-                            ${o.status_history.map(sh => `<div class="flex items-center gap-2 text-xs"><span class="px-2 py-0.5 rounded-lg ${SC[sh.status]}">${SL[sh.status]}</span><span class="text-gray-400">${sh.changed_at ? new Date(sh.changed_at).toLocaleString('pt-BR') : ''}</span></div>`).join('')}
+                            ${o.historico_status.map(sh => `<div class="flex items-center gap-2 text-xs"><span class="px-2 py-0.5 rounded-lg ${SC[sh.status]}">${SL[sh.status]}</span><span class="text-gray-400">${sh.alterado_em ? new Date(sh.alterado_em).toLocaleString('pt-BR') : ''}</span></div>`).join('')}
                         </div>
                     </div>
                 </div>
@@ -244,7 +244,7 @@
         const btn = document.getElementById('cancel-confirm-btn');
         btn.disabled = true; btn.textContent = 'Cancelando...';
         try {
-            const res = await API.patch(`/api/orders/${cancelOrderId}/status/`, { status: 'cancelled', cancellation_reason: reason });
+            const res = await API.patch(`/api/orders/${cancelOrderId}/status/`, { status: 'cancelado', motivo_cancelamento: reason });
             if (res.ok) { showToast('Pedido cancelado'); closeCancelModal(); loadOrders(); }
             else { const d = await res.json(); showToast(d.error || 'Erro', 'error'); }
         } catch { showToast('Erro', 'error'); }

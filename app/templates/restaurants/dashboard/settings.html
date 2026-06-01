@@ -209,39 +209,39 @@
 
             document.getElementById('sf-status').checked = r.status === 'active';
             updateStatusLabel();
-            document.getElementById('sf-name').value = r.name || '';
+            document.getElementById('sf-name').value = r.nome || '';
             document.getElementById('sf-cover').value = '';
-            document.getElementById('sf-desc').value = r.description || '';
-            document.getElementById('sf-fee').value = MoneyHelper.format(r.delivery_fee || 0);
+            document.getElementById('sf-desc').value = r.descricao || '';
+            document.getElementById('sf-fee').value = MoneyHelper.format(r.taxa_entrega || 0);
 
             // Contact
-            document.getElementById('sf-phone').value = r.contact?.phone || '';
-            document.getElementById('sf-whatsapp').value = r.contact?.whatsapp || '';
-            document.getElementById('sf-email').value = r.contact?.email || '';
+            document.getElementById('sf-phone').value = r.contato?.telefone || '';
+            document.getElementById('sf-whatsapp').value = r.contato?.whatsapp || '';
+            document.getElementById('sf-email').value = r.contato?.email || '';
 
             // Address
-            document.getElementById('sf-street').value = r.address?.street || '';
-            document.getElementById('sf-number').value = r.address?.number || '';
-            document.getElementById('sf-neighborhood').value = r.address?.neighborhood || '';
-            document.getElementById('sf-complement').value = r.address?.complement || '';
-            document.getElementById('sf-zip').value = r.address?.zip_code || '';
-            document.getElementById('sf-city').value = r.address?.city || '';
-            document.getElementById('sf-state').value = r.address?.state || '';
+            document.getElementById('sf-street').value = r.endereco?.rua || '';
+            document.getElementById('sf-number').value = r.endereco?.numero || '';
+            document.getElementById('sf-neighborhood').value = r.endereco?.bairro || '';
+            document.getElementById('sf-complement').value = r.endereco?.complemento || '';
+            document.getElementById('sf-zip').value = r.endereco?.cep || '';
+            document.getElementById('sf-city').value = r.endereco?.cidade || '';
+            document.getElementById('sf-state').value = r.endereco?.estado || '';
 
             // Business hours
             const hoursEl = document.getElementById('business-hours-list');
             const existingHours = {};
-            (r.business_hours || []).forEach(bh => { existingHours[bh.day] = bh; });
+            (r.horarios_funcionamento || []).forEach(bh => { existingHours[bh.dia] = bh; });
 
             hoursEl.innerHTML = DAYS.map((name, i) => {
-                const bh = existingHours[i] || { day: i, open: '08:00', close: '22:00', is_closed: true };
+                const bh = existingHours[i] || { dia: i, abertura: '08:00', fechamento: '22:00', fechado: true };
                 return `
                     <div class="day-row">
                         <span class="text-sm text-gray-600">${name}</span>
-                        <input type="time" id="bh-open-${i}" value="${bh.is_closed ? '08:00' : (bh.open || '08:00')}" class="px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400 ${bh.is_closed ? 'opacity-40' : ''}" ${bh.is_closed ? 'disabled' : ''}>
-                        <input type="time" id="bh-close-${i}" value="${bh.is_closed ? '22:00' : (bh.close || '22:00')}" class="px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400 ${bh.is_closed ? 'opacity-40' : ''}" ${bh.is_closed ? 'disabled' : ''}>
+                        <input type="time" id="bh-open-${i}" value="${bh.fechado ? '08:00' : (bh.abertura || '08:00')}" class="px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400 ${bh.fechado ? 'opacity-40' : ''}" ${bh.fechado ? 'disabled' : ''}>
+                        <input type="time" id="bh-close-${i}" value="${bh.fechado ? '22:00' : (bh.fechamento || '22:00')}" class="px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-800 text-sm outline-none focus:border-red-400 ${bh.fechado ? 'opacity-40' : ''}" ${bh.fechado ? 'disabled' : ''}>
                         <label class="flex items-center gap-1.5 cursor-pointer">
-                            <input type="checkbox" id="bh-closed-${i}" ${bh.is_closed ? 'checked' : ''} onchange="toggleDayInputs(${i})" class="w-4 h-4 rounded border-gray-200 bg-gray-100 text-red-500 focus:ring-red-400">
+                            <input type="checkbox" id="bh-closed-${i}" ${bh.fechado ? 'checked' : ''} onchange="toggleDayInputs(${i})" class="w-4 h-4 rounded border-gray-200 bg-gray-100 text-red-500 focus:ring-red-400">
                             <span class="text-xs text-gray-400">Fechado</span>
                         </label>
                     </div>
@@ -277,17 +277,17 @@
         errDiv.classList.add('hidden');
 
         const businessHours = DAYS.map((_, i) => ({
-            day: i,
-            open: document.getElementById(`bh-open-${i}`).value,
-            close: document.getElementById(`bh-close-${i}`).value,
-            is_closed: document.getElementById(`bh-closed-${i}`).checked,
+            dia: i,
+            abertura: document.getElementById(`bh-open-${i}`).value,
+            fechamento: document.getElementById(`bh-close-${i}`).value,
+            fechado: document.getElementById(`bh-closed-${i}`).checked,
         }));
 
         const formData = new FormData();
-        formData.append('name', document.getElementById('sf-name').value);
-        formData.append('description', document.getElementById('sf-desc').value);
-        formData.append('status', document.getElementById('sf-status').checked ? 'active' : 'inactive');
-        formData.append('delivery_fee', MoneyHelper.unmask(document.getElementById('sf-fee').value));
+        formData.append('nome', document.getElementById('sf-name').value);
+        formData.append('descricao', document.getElementById('sf-desc').value);
+        formData.append('status', document.getElementById('sf-status').checked ? 'ativo' : 'inativo');
+        formData.append('taxa_entrega', MoneyHelper.unmask(document.getElementById('sf-fee').value));
 
         const coverFile = document.getElementById('sf-cover').files[0];
         if (coverFile) {
@@ -295,28 +295,28 @@
         }
 
         const contact = {
-            phone: document.getElementById('sf-phone').value,
+            telefone: document.getElementById('sf-phone').value,
             whatsapp: document.getElementById('sf-whatsapp').value || null,
             email: document.getElementById('sf-email').value || null,
         };
-        formData.append('contact', JSON.stringify(contact));
+        formData.append('contato', JSON.stringify(contact));
 
         const address = {
-            street: document.getElementById('sf-street').value,
-            number: document.getElementById('sf-number').value,
-            neighborhood: document.getElementById('sf-neighborhood').value,
-            complement: document.getElementById('sf-complement').value || null,
-            city: document.getElementById('sf-city').value,
-            state: document.getElementById('sf-state').value,
-            zip_code: document.getElementById('sf-zip').value,
+            rua: document.getElementById('sf-street').value,
+            numero: document.getElementById('sf-number').value,
+            bairro: document.getElementById('sf-neighborhood').value,
+            complemento: document.getElementById('sf-complement').value || null,
+            cidade: document.getElementById('sf-city').value,
+            estado: document.getElementById('sf-state').value,
+            cep: document.getElementById('sf-zip').value,
         };
-        formData.append('address', JSON.stringify(address));
-        formData.append('business_hours', JSON.stringify(businessHours));
+        formData.append('endereco', JSON.stringify(address));
+        formData.append('horarios_funcionamento', JSON.stringify(businessHours));
 
         try {
             let res;
             if (isCreating) {
-                res = await API.post('/api/restaurants/', formData);
+                res = await API.post('/api/restaurants/create/', formData);
             } else {
                 res = await API.put(`/api/restaurants/${rid}/`, formData);
             }
@@ -349,12 +349,12 @@
     DashboardNav.init();
 
     CEPHelper.init('sf-zip', {
-        street: 'sf-street',
-        neighborhood: 'sf-neighborhood',
-        city: 'sf-city',
-        state: 'sf-state',
-        complement: 'sf-complement',
-        number: 'sf-number'
+        rua: 'sf-street',
+        bairro: 'sf-neighborhood',
+        cidade: 'sf-city',
+        estado: 'sf-state',
+        complemento: 'sf-complement',
+        numero: 'sf-number'
     });
 
     MoneyHelper.init('sf-fee');

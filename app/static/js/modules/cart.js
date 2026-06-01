@@ -22,16 +22,16 @@ const Cart = {
         } else { 
             cart.items.push({ 
                 product_id: product.id, 
-                name: product.name, 
-                price: product.price, 
-                image_url: product.image_url, 
+                nome: product.nome, 
+                preco: product.preco, 
+                image_url: product.image_url || product.imagem_url, 
                 quantity: 1,
-                restaurant_id: restaurantId,
-                restaurant_name: restaurantName
+                restaurante_id: restaurantId,
+                restaurante_nome: restaurantName
             }); 
         }
         this.save(cart);
-        showToast(`${product.name} adicionado ao carrinho!`);
+        showToast(`${product.nome} adicionado ao carrinho!`);
     },
     
     updateQuantity(productId, qty) {
@@ -51,12 +51,12 @@ const Cart = {
     
     getTotal() { 
         const cart = this.get(); 
-        return cart.items.reduce((t, i) => t + i.price * i.quantity, 0); 
+        return cart.items.reduce((t, i) => t + i.preco * i.quantity, 0); 
     },
     
     getTotalByRestaurant(restaurantId) { 
         const cart = this.get(); 
-        return cart.items.filter(i => i.restaurant_id === restaurantId).reduce((t, i) => t + i.price * i.quantity, 0); 
+        return cart.items.filter(i => (i.restaurante_id || i.restaurant_id) === restaurantId).reduce((t, i) => t + i.preco * i.quantity, 0); 
     },
     
     getCount() { 
@@ -68,8 +68,10 @@ const Cart = {
         const cart = this.get();
         const rests = {};
         cart.items.forEach(i => {
-            if (!rests[i.restaurant_id]) rests[i.restaurant_id] = { id: i.restaurant_id, name: i.restaurant_name, items: [] };
-            rests[i.restaurant_id].items.push(i);
+            const rId = i.restaurante_id || i.restaurant_id;
+            const rNome = i.restaurante_nome || i.restaurant_nome;
+            if (!rests[rId]) rests[rId] = { id: rId, nome: rNome, items: [] };
+            rests[rId].items.push(i);
         });
         return Object.values(rests);
     },

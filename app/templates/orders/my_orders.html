@@ -49,8 +49,8 @@
 
 {% block extra_js %}
 <script>
-    const statusLabels = { pending: 'Pendente', confirmed: 'Confirmado', preparing: 'Preparando', ready: 'Pronto', delivered: 'Entregue', cancelled: 'Cancelado' };
-    const statusBg = { pending: 'bg-amber-100 text-amber-700', confirmed: 'bg-blue-100 text-blue-700', preparing: 'bg-violet-100 text-violet-700', ready: 'bg-emerald-100 text-emerald-700', delivered: 'bg-emerald-100 text-emerald-700', cancelled: 'bg-red-100 text-red-700' };
+    const statusLabels = { pendente: 'Pendente', confirmado: 'Confirmado', preparando: 'Preparando', pronto: 'Pronto', entregue: 'Entregue', cancelado: 'Cancelado' };
+    const statusBg = { pendente: 'bg-amber-100 text-amber-700', confirmado: 'bg-blue-100 text-blue-700', preparando: 'bg-violet-100 text-violet-700', pronto: 'bg-emerald-100 text-emerald-700', entregue: 'bg-emerald-100 text-emerald-700', cancelado: 'bg-red-100 text-red-700' };
 
     async function loadOrders() {
         if (!Auth.isAuthenticated()) { window.location.href = '/login/'; return; }
@@ -63,20 +63,20 @@
             empty.classList.add('hidden');
             list.innerHTML = data.results.map(o => `
                 <div class="bg-white rounded-2xl p-5 card-hover fade-in border border-gray-100 shadow-card">
-                    <a href="/pedido/${o.order_number}/acompanhar/" class="flex items-center justify-between block mb-4">
+                    <a href="/pedido/${o.numero_pedido}/acompanhar/" class="flex items-center justify-between block mb-4">
                         <div>
-                            <p class="text-sm font-semibold text-red-500">${o.order_number}</p>
-                            <p class="text-xs text-gray-500 mt-1">${o.items.length} item(ns) · ${formatMoney(o.total)}</p>
-                            <p class="text-xs text-gray-400 mt-1">${new Date(o.created_at).toLocaleDateString('pt-BR')}</p>
+                            <p class="text-sm font-semibold text-red-500">${o.numero_pedido}</p>
+                            <p class="text-xs text-gray-500 mt-1">${o.itens.length} item(ns) · ${formatMoney(o.total)}</p>
+                            <p class="text-xs text-gray-400 mt-1">${new Date(o.criado_em).toLocaleDateString('pt-BR')}</p>
                         </div>
                         <span class="px-3 py-1 rounded-lg text-xs font-semibold ${statusBg[o.status]}">${statusLabels[o.status]}</span>
                     </a>
                     <div class="flex gap-2 pt-4 border-t border-gray-100">
-                        <button onclick="reorder('${o.restaurant_id}', ${JSON.stringify(o.items).replace(/"/g, '&quot;')})" class="flex-1 px-3 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-gray-200">
+                        <button onclick="reorder('${o.restaurante_id}', ${JSON.stringify(o.itens).replace(/"/g, '&quot;')})" class="flex-1 px-3 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-gray-200">
                             <i data-lucide="rotate-cw" class="w-4 h-4"></i> Refazer Pedido
                         </button>
-                        ${o.status === 'delivered' ? `
-                        <button onclick="openReviewModal('${o.id}', '${o.restaurant_id}', 'Avaliar Pedido')" class="flex-1 px-3 py-2 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 text-xs font-medium transition-colors flex items-center justify-center gap-2">
+                        ${o.status === 'entregue' ? `
+                        <button onclick="openReviewModal('${o.id}', '${o.restaurante_id}', 'Avaliar Pedido')" class="flex-1 px-3 py-2 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 text-xs font-medium transition-colors flex items-center justify-center gap-2">
                             <i data-lucide="star" class="w-4 h-4"></i> Avaliar
                         </button>` : ''}
                     </div>
@@ -118,7 +118,7 @@
         const btn = document.getElementById('btn-submit-review');
         btn.textContent = 'Enviando...'; btn.disabled = true;
         try {
-            const res = await API.post('/api/reviews/', { order_id: document.getElementById('review-order-id').value, restaurant_id: document.getElementById('review-restaurant-id').value, rating: parseInt(rating), comment: document.getElementById('review-comment').value.trim() });
+            const res = await API.post('/api/reviews/', { pedido_id: document.getElementById('review-order-id').value, restaurante_id: document.getElementById('review-restaurant-id').value, nota: parseInt(rating), comentario: document.getElementById('review-comment').value.trim() });
             if (res.ok) { showToast('Avaliação enviada com sucesso!'); closeReviewModal(); }
             else { const err = await res.json(); showToast(err.error || 'Erro ao enviar avaliação.', 'error'); }
         } catch (e) { showToast('Erro de conexão.', 'error'); }
@@ -127,7 +127,7 @@
 
     function reorder(restaurantId, items) {
         Cart.clear();
-        items.forEach(i => { Cart.add({ id: i.product_id, name: i.name, price: i.price, image_url: i.image_url }, restaurantId, "Restaurante"); if (i.quantity > 1) { Cart.updateQuantity(i.product_id, i.quantity); } });
+        items.forEach(i => { Cart.add({ id: i.produto_id, nome: i.nome, preco: i.preco, image_url: i.imagem_url }, restaurantId, "Restaurante"); if (i.quantidade > 1) { Cart.updateQuantity(i.produto_id, i.quantidade); } });
         window.location.href = '/carrinho/';
     }
 

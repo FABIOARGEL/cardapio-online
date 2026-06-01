@@ -13,7 +13,7 @@
     .google-btn-custom:hover { background: #f9fafb; border-color: #d1d5db; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
     .google-btn-custom:active { transform: translateY(0); }
     .google-btn-custom svg { flex-shrink: 0; }
-    .google-btn-custom:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+    .google-btn-custom:disabled { opacidade: 0.6; cursor: not-allowed; transform: none !important; }
     #google-btn-gsi { display: flex; justify-content: center; }
     #google-btn-gsi > div { width: 100% !important; }
     .divider-bg { background: #ffffff; }
@@ -38,10 +38,10 @@
 
         <!-- Role Selection -->
         <div class="flex gap-3 mb-6">
-            <button onclick="selectRole('customer')" id="role-customer" class="flex-1 py-3 px-4 rounded-xl border-2 border-red-500 bg-red-50 text-red-500 text-sm font-medium transition-all">
+            <button onclick="selectRole('cliente')" id="role-customer" class="flex-1 py-3 px-4 rounded-xl border-2 border-red-500 bg-red-50 text-red-500 text-sm font-medium transition-all">
                 <i data-lucide="user" class="w-5 h-5 mx-auto mb-1"></i>Cliente
             </button>
-            <button onclick="selectRole('owner')" id="role-owner" class="flex-1 py-3 px-4 rounded-xl border-2 border-gray-200 bg-gray-50 text-gray-500 text-sm font-medium transition-all hover:border-red-300">
+            <button onclick="selectRole('dono')" id="role-owner" class="flex-1 py-3 px-4 rounded-xl border-2 border-gray-200 bg-gray-50 text-gray-500 text-sm font-medium transition-all hover:border-red-300">
                 <i data-lucide="store" class="w-5 h-5 mx-auto mb-1"></i>Restaurante
             </button>
         </div>
@@ -69,7 +69,7 @@
 
         <!-- Registration Form -->
         <form id="register-form" class="space-y-4">
-            <input type="hidden" id="register-role" value="customer">
+            <input type="hidden" id="register-role" value="cliente">
             <div>
                 <label for="register-name" class="block text-sm font-medium text-gray-700 mb-1.5">Nome completo</label>
                 <input type="text" id="register-name" required placeholder="Seu nome" class="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 placeholder-gray-400 outline-none focus:bg-white transition-all text-sm">
@@ -97,7 +97,7 @@
 <script>
     const GOOGLE_CLIENT_ID = '{{ GOOGLE_CLIENT_ID }}';
     let googleInitialized = false;
-    let selectedRole = 'customer';
+    let selectedRole = 'cliente';
 
     function handleGoogleCredentialResponse(response) {
         const errorDiv = document.getElementById('register-error');
@@ -110,14 +110,14 @@
         fetch('/api/auth/google/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ credential: response.credential, role: selectedRole }),
+            body: JSON.stringify({ credential: response.credential, papel: selectedRole }),
         })
         .then(res => res.json().then(data => ({ ok: res.ok, data })))
         .then(({ ok, data }) => {
             if (ok && data.access_token) {
                 Auth.setAuth(data);
                 showToast('Conta criada com sucesso!');
-                setTimeout(() => { window.location.href = data.user.role === 'owner' ? '/dashboard/' : '/'; }, 500);
+                setTimeout(() => { window.location.href = data.user.papel === 'dono' ? '/dashboard/' : '/'; }, 500);
             } else {
                 errorDiv.textContent = data.error || 'Erro ao cadastrar com Google.';
                 errorDiv.classList.remove('hidden');
@@ -177,7 +177,7 @@
         document.getElementById('register-role').value = role;
         const cBtn = document.getElementById('role-customer');
         const oBtn = document.getElementById('role-owner');
-        if (role === 'customer') {
+        if (role === 'cliente') {
             cBtn.classList.add('border-red-500', 'bg-red-50', 'text-red-500');
             cBtn.classList.remove('border-gray-200', 'bg-gray-50', 'text-gray-500');
             oBtn.classList.remove('border-red-500', 'bg-red-50', 'text-red-500');
@@ -200,13 +200,13 @@
         try {
             const res = await fetch('/api/auth/register/', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: document.getElementById('register-name').value, email: document.getElementById('register-email').value, password: document.getElementById('register-password').value, role: selectedRole }),
+                body: JSON.stringify({ nome: document.getElementById('register-name').value, email: document.getElementById('register-email').value, senha: document.getElementById('register-password').value, papel: selectedRole }),
             });
             const data = await res.json();
             if (res.ok) {
                 Auth.setAuth(data);
                 showToast('Conta criada com sucesso!');
-                setTimeout(() => { window.location.href = selectedRole === 'owner' ? '/dashboard/' : '/'; }, 500);
+                setTimeout(() => { window.location.href = selectedRole === 'dono' ? '/dashboard/' : '/'; }, 500);
             } else {
                 let msg = data.error || '';
                 if (!msg) { const messages = []; for (const [key, val] of Object.entries(data)) { if (Array.isArray(val)) messages.push(...val); else if (typeof val === 'string') messages.push(val); } msg = messages.join(' ') || 'Erro ao cadastrar.'; }

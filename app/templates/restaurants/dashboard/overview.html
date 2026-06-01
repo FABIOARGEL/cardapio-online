@@ -121,8 +121,8 @@
 
 {% block extra_js %}
 <script>
-    const SL = {pending:'Pendente',confirmed:'Confirmado',preparing:'Preparando',ready:'Pronto',delivered:'Entregue',cancelled:'Cancelado'};
-    const SC = {pending:'bg-amber-100 text-amber-700',confirmed:'bg-blue-100 text-blue-700',preparing:'bg-violet-100 text-violet-700',ready:'bg-emerald-100 text-emerald-700',delivered:'bg-emerald-100 text-emerald-700',cancelled:'bg-red-100 text-red-700'};
+    const SL = {pendente:'Pendente',confirmado:'Confirmado',preparando:'Preparando',pronto:'Pronto',entregue:'Entregue',cancelado:'Cancelado'};
+    const SC = {pendente:'bg-amber-100 text-amber-700',confirmado:'bg-blue-100 text-blue-700',preparando:'bg-violet-100 text-violet-700',pronto:'bg-emerald-100 text-emerald-700',entregue:'bg-emerald-100 text-emerald-700',cancelado:'bg-red-100 text-red-700'};
 
 
 
@@ -140,36 +140,36 @@
             const s = await res.json();
 
             // KPIs
-            document.getElementById('kpi-today-revenue').textContent = formatMoney(s.today.revenue);
-            document.getElementById('kpi-today-orders').textContent = s.today.orders;
-            document.getElementById('kpi-week-revenue').textContent = formatMoney(s.week.revenue);
-            document.getElementById('kpi-week-orders').textContent = s.week.orders;
-            document.getElementById('kpi-month-revenue').textContent = formatMoney(s.month.revenue);
-            document.getElementById('kpi-month-orders').textContent = s.month.orders;
-            document.getElementById('kpi-ticket').textContent = formatMoney(s.ticket_average);
+            document.getElementById('kpi-today-revenue').textContent = formatMoney(s.hoje.receita);
+            document.getElementById('kpi-today-orders').textContent = s.hoje.pedidos;
+            document.getElementById('kpi-week-revenue').textContent = formatMoney(s.semana.receita);
+            document.getElementById('kpi-week-orders').textContent = s.semana.pedidos;
+            document.getElementById('kpi-month-revenue').textContent = formatMoney(s.mes.receita);
+            document.getElementById('kpi-month-orders').textContent = s.mes.pedidos;
+            document.getElementById('kpi-ticket').textContent = formatMoney(s.ticket_medio);
             document.getElementById('kpi-products').textContent = s.available_products;
 
             // Chart
-            const maxRev = Math.max(...s.daily_revenue.map(d => d.revenue), 1);
-            document.getElementById('chart-container').innerHTML = s.daily_revenue.map(d => {
-                const h = Math.max((d.revenue / maxRev) * 160, 4);
+            const maxRev = Math.max(...s.receita_diaria.map(d => d.receita), 1);
+            document.getElementById('chart-container').innerHTML = s.receita_diaria.map(d => {
+                const h = Math.max((d.receita / maxRev) * 160, 4);
                 return `<div class="flex-1 flex flex-col items-center gap-1">
-                    <span class="text-[10px] text-gray-400">${d.revenue > 0 ? formatMoney(d.revenue) : ''}</span>
-                    <div class="w-full bg-gradient-to-t from-red-500 to-red-400 rounded-t-lg chart-bar cursor-pointer group relative" style="height:${h}px" title="${d.orders} pedidos">
-                        <div class="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-800 text-xs text-white px-2 py-1 rounded-lg shadow-lg whitespace-nowrap">${d.orders} pedidos</div>
+                    <span class="text-[10px] text-gray-400">${d.receita > 0 ? formatMoney(d.receita) : ''}</span>
+                    <div class="w-full bg-gradient-to-t from-red-500 to-red-400 rounded-t-lg chart-bar cursor-pointer group relative" style="height:${h}px" title="${d.pedidos} pedidos">
+                        <div class="absolute -top-8 left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-800 text-xs text-white px-2 py-1 rounded-lg shadow-lg whitespace-nowrap">${d.pedidos} pedidos</div>
                     </div>
-                    <span class="text-[10px] text-gray-400">${d.day_name}</span>
+                    <span class="text-[10px] text-gray-400">${d.nome_dia}</span>
                 </div>`;
             }).join('');
 
             // Top Products
             const topEl = document.getElementById('top-products');
-            if (s.top_products.length) {
-                topEl.innerHTML = s.top_products.map((p, i) => `
+            if (s.produtos_mais_vendidos.length) {
+                topEl.innerHTML = s.produtos_mais_vendidos.map((p, i) => `
                     <div class="flex items-center gap-3">
                         <span class="w-6 h-6 rounded-lg bg-red-50 flex items-center justify-center text-xs font-bold text-red-500">${i+1}</span>
-                        <span class="text-sm text-gray-700 flex-1 truncate">${p.name}</span>
-                        <span class="text-xs text-gray-400">${p.quantity}x</span>
+                        <span class="text-sm text-gray-700 flex-1 truncate">${p.nome}</span>
+                        <span class="text-xs text-gray-400">${p.quantidade}x</span>
                     </div>
                 `).join('');
             } else {
@@ -178,12 +178,12 @@
 
             // Recent Orders
             const recentEl = document.getElementById('recent-orders');
-            if (s.recent_orders.length) {
-                recentEl.innerHTML = s.recent_orders.map(o => `
+            if (s.pedidos_recentes.length) {
+                recentEl.innerHTML = s.pedidos_recentes.map(o => `
                     <div class="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
                         <div>
-                            <span class="text-sm font-medium text-red-500">${o.order_number}</span>
-                            <p class="text-xs text-gray-400">${o.items.length} ite${o.items.length > 1 ? 'ns' : 'm'} · ${new Date(o.created_at).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}</p>
+                            <span class="text-sm font-medium text-red-500">${o.numero_pedido}</span>
+                            <span class="text-xs text-gray-400">${new Date(o.criado_em).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-sm font-medium text-gray-800">${formatMoney(o.total)}</span>
@@ -197,15 +197,15 @@
 
             // Status Breakdown
             const statusEl = document.getElementById('status-breakdown');
-            const statuses = ['pending','confirmed','preparing','ready','delivered','cancelled'];
-            const total = Object.values(s.status_counts).reduce((a,b)=>a+b, 0) || 1;
+            const statuses = ['pendente','confirmado','preparando','pronto','entregue','cancelado'];
+            const total = Object.values(s.contagem_status).reduce((a,b)=>a+b, 0) || 1;
             statusEl.innerHTML = statuses.map(st => {
-                const count = s.status_counts[st] || 0;
+                const count = s.contagem_status[st] || 0;
                 const pct = Math.round((count / total) * 100);
                 return `<div class="flex items-center gap-3">
                     <span class="text-xs w-20 text-gray-500">${SL[st]}</span>
                     <div class="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div class="h-full rounded-full ${st==='cancelled' ? 'bg-red-500' : st==='delivered' ? 'bg-emerald-500' : 'bg-red-400'}" style="width:${pct}%; transition: width 0.8s ease"></div>
+                        <div class="h-full rounded-full ${st==='cancelado' ? 'bg-red-500' : st==='entregue' ? 'bg-emerald-500' : 'bg-red-400'}" style="width:${pct}%; transition: width 0.8s ease"></div>
                     </div>
                     <span class="text-xs text-gray-400 w-8 text-right">${count}</span>
                 </div>`;

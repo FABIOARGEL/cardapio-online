@@ -53,13 +53,13 @@
             <button onclick="filterCategory(null)" class="category-btn active px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-red-500 text-white shadow-sm" data-category="all">
                 <i data-lucide="grid-3x3" class="w-4 h-4 inline mr-1"></i>Todos
             </button>
-            <button onclick="filterCategory('main')" class="category-btn px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50" data-category="main">
+            <button onclick="filterCategory('principal')" class="category-btn px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50" data-category="principal">
                 <i data-lucide="beef" class="w-4 h-4 inline mr-1"></i>Pratos
             </button>
-            <button onclick="filterCategory('drink')" class="category-btn px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50" data-category="drink">
+            <button onclick="filterCategory('bebida')" class="category-btn px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50" data-category="bebida">
                 <i data-lucide="cup-soda" class="w-4 h-4 inline mr-1"></i>Bebidas
             </button>
-            <button onclick="filterCategory('dessert')" class="category-btn px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50" data-category="dessert">
+            <button onclick="filterCategory('sobremesa')" class="category-btn px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50" data-category="sobremesa">
                 <i data-lucide="cake-slice" class="w-4 h-4 inline mr-1"></i>Sobremesas
             </button>
             <button onclick="filterCategory('combo')" class="category-btn px-4 py-2.5 rounded-xl text-sm font-medium transition-all bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 hover:bg-red-50" data-category="combo">
@@ -124,19 +124,19 @@
     }
 
     function renderRestaurantCard(r) {
-        const imgUrl = getImageUrl(r.cover_image_url);
-        const rating = r.rating?.average?.toFixed(1) || '0.0';
-        const reviewCount = r.rating?.count || 0;
-        const neighborhood = r.address?.neighborhood || '';
-        const city = r.address?.city || '';
+        const imgUrl = getImageUrl(r.imagem_capa_url);
+        const rating = r.avaliacao?.media?.toFixed(1) || '0.0';
+        const reviewCount = r.avaliacao?.contagem || 0;
+        const neighborhood = r.endereco?.bairro || '';
+        const city = r.endereco?.cidade || '';
         const location = [neighborhood, city].filter(Boolean).join(', ');
-        const deliveryFee = r.delivery_fee > 0 ? formatMoney(r.delivery_fee) : 'Grátis';
+        const deliveryFee = r.taxa_entrega > 0 ? formatMoney(r.taxa_entrega) : 'Grátis';
 
         return `
             <a href="/restaurante/${r.slug}/" class="restaurant-card rounded-2xl overflow-hidden block fade-in group">
                 <div class="card-cover h-44 bg-gray-100 relative overflow-hidden">
                     ${imgUrl
-                        ? `<img src="${imgUrl}" alt="${r.name}" class="w-full h-full object-cover"
+                        ? `<img src="${imgUrl}" alt="${r.nome}" class="w-full h-full object-cover"
                                 onerror="this.parentElement.innerHTML='<div class=\\'fallback-cover w-full h-full flex items-center justify-center\\'><i data-lucide=\\'utensils\\' class=\\'w-12 h-12 text-gray-300\\'></i></div>'; lucide.createIcons();">`
                         : `<div class="fallback-cover w-full h-full flex items-center justify-center">
                             <i data-lucide="utensils" class="w-12 h-12 text-gray-300"></i>
@@ -157,14 +157,14 @@
                     </div>
                 </div>
                 <div class="p-5">
-                    <h3 class="text-lg font-bold text-gray-800 mb-1.5 group-hover:text-red-500 transition-colors">${r.name}</h3>
-                    <p class="text-sm text-gray-500 line-clamp-2 mb-4">${r.description || 'Restaurante parceiro'}</p>
+                    <h3 class="text-lg font-bold text-gray-800 mb-1.5 group-hover:text-red-500 transition-colors">${r.nome}</h3>
+                    <p class="text-sm text-gray-500 line-clamp-2 mb-4">${r.descricao || 'Restaurante parceiro'}</p>
                     <div class="flex items-center justify-between text-xs">
                         <div class="flex items-center gap-1.5 text-gray-400">
                             <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
                             <span>${location || 'Localização não informada'}</span>
                         </div>
-                        <div class="flex items-center gap-1.5 ${r.delivery_fee > 0 ? 'text-gray-500' : 'text-emerald-500 font-semibold'}">
+                        <div class="flex items-center gap-1.5 ${r.taxa_entrega > 0 ? 'text-gray-500' : 'text-emerald-500 font-semibold'}">
                             <i data-lucide="bike" class="w-3.5 h-3.5"></i>
                             <span>${deliveryFee}</span>
                         </div>

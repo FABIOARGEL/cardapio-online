@@ -15,12 +15,12 @@
     .add-btn { min-width: 44px; min-height: 44px; }
     
     /* Modal Animations */
-    .modal-overlay { opacity: 0; transition: opacity 0.3s ease; }
-    .modal-overlay.active { opacity: 1; }
+    .modal-overlay { opacidade: 0; transition: opacity 0.3s ease; }
+    .modal-overlay.active { opacidade: 1; }
     .modal-content { transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     @media (min-width: 640px) {
-        .modal-content { transform: translateY(20px) scale(0.95); opacity: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .modal-content.active { transform: translateY(0) scale(1); opacity: 1; }
+        .modal-content { transform: translateY(20px) scale(0.95); opacidade: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .modal-content.active { transform: translateY(0) scale(1); opacidade: 1; }
     }
     .modal-content.active { transform: translateY(0); }
     .gallery-thumb { border: 2px solid transparent; transition: all 0.2s; }
@@ -208,18 +208,18 @@
         }
 
         const r = restaurantData;
-        document.getElementById('restaurant-name').textContent = r.name;
-        document.getElementById('restaurant-desc').textContent = r.description || '';
-        document.getElementById('restaurant-rating').textContent = (r.rating?.average || 0).toFixed(1);
-        document.getElementById('restaurant-reviews').textContent = `(${r.rating?.count || 0} avaliações)`;
+        document.getElementById('restaurant-name').textContent = r.nome;
+        document.getElementById('restaurant-desc').textContent = r.descricao || '';
+        document.getElementById('restaurant-rating').textContent = (r.avaliacao?.media || 0).toFixed(1);
+        document.getElementById('restaurant-reviews').textContent = `(${r.avaliacao?.contagem || 0} avaliações)`;
 
-        const addr = r.address;
-        if (addr) { document.getElementById('restaurant-address').textContent = `${addr.neighborhood || ''}, ${addr.city || ''}`; }
+        const addr = r.endereco;
+        if (addr) { document.getElementById('restaurant-address').textContent = `${addr.bairro || ''}, ${addr.cidade || ''}`; }
 
-        const deliveryFee = r.delivery_fee > 0 ? formatMoney(r.delivery_fee) : 'Entrega Grátis';
+        const deliveryFee = r.taxa_entrega > 0 ? formatMoney(r.taxa_entrega) : 'Entrega Grátis';
         document.getElementById('restaurant-delivery-fee').textContent = deliveryFee;
 
-        const coverUrl = getImageUrl(r.cover_image_url);
+        const coverUrl = getImageUrl(r.imagem_capa_url);
         if (coverUrl) {
             const container = document.getElementById('cover-container');
             const img = new Image();
@@ -227,16 +227,16 @@
             img.src = coverUrl;
         }
 
-        const categories = { appetizer: '🥗 Entradas', main: '🍽️ Pratos', dessert: '🍰 Sobremesas', drink: '🥤 Bebidas', combo: '📦 Combos' };
+        const categories = { entrada: '🥗 Entradas', principal: '🍽️ Pratos', sobremesa: '🍰 Sobremesas', bebida: '🥤 Bebidas', combo: '📦 Combos' };
         const tabs = document.getElementById('category-tabs');
-        const availableCats = [...new Set((r.products || []).map(p => p.category))];
-        let tabsHtml = `<button onclick="filterProducts(null)" class="cat-tab whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium bg-red-500 text-white shadow-sm transition-all" data-cat="all">Todos (${(r.products || []).length})</button>`;
+        const availableCats = [...new Set((r.produtos || []).map(p => p.categoria))];
+        let tabsHtml = `<button onclick="filterProducts(null)" class="cat-tab whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium bg-red-500 text-white shadow-sm transition-all" data-cat="all">Todos (${(r.produtos || []).length})</button>`;
         availableCats.forEach(cat => {
-            const count = (r.products || []).filter(p => p.category === cat).length;
+            const count = (r.produtos || []).filter(p => p.categoria === cat).length;
             tabsHtml += `<button onclick="filterProducts('${cat}')" class="cat-tab whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 transition-all" data-cat="${cat}">${categories[cat] || cat} (${count})</button>`;
         });
         tabs.innerHTML = tabsHtml;
-        renderProducts(r.products || []);
+        renderProducts(r.produtos || []);
     }
 
     function filterProducts(category) {
@@ -246,8 +246,8 @@
             if (isActive) { b.classList.add('bg-red-500', 'text-white', 'shadow-sm'); b.classList.remove('bg-white', 'text-gray-600', 'border', 'border-gray-200'); }
             else { b.classList.remove('bg-red-500', 'text-white', 'shadow-sm'); b.classList.add('bg-white', 'text-gray-600', 'border', 'border-gray-200'); }
         });
-        const products = restaurantData.products || [];
-        const filtered = category ? products.filter(p => p.category === category) : products;
+        const products = restaurantData.produtos || [];
+        const filtered = category ? products.filter(p => p.categoria === category) : products;
         renderProducts(filtered);
     }
 
@@ -259,18 +259,18 @@
         empty.classList.add('hidden'); counter.classList.remove('hidden');
         document.getElementById('products-count-text').textContent = `${products.length} produto(s)`;
         grid.innerHTML = products.map(p => {
-            const imgUrl = getImageUrl(p.image_url);
-            const priceFormatted = formatMoney(p.price || 0);
+            const imgUrl = getImageUrl(p.imagem_url);
+            const priceFormatted = formatMoney(p.preco || 0);
             const pJson = JSON.stringify(p).replace(/"/g, '&quot;');
             return `
                 <div class="product-card rounded-2xl overflow-hidden flex flex-col h-full fade-in cursor-pointer group" onclick="openProductModal(${pJson})">
                     <div class="product-img h-48 bg-gray-100 relative overflow-hidden flex-shrink-0">
-                        ${imgUrl ? `<img src="${imgUrl}" alt="${p.name}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\\'product-fallback w-full h-full flex items-center justify-center\\'><i data-lucide=\\'image\\' class=\\'w-12 h-12 text-gray-300\\'></i></div>'; lucide.createIcons();">` : `<div class="product-fallback w-full h-full flex items-center justify-center"><i data-lucide="image" class="w-12 h-12 text-gray-300"></i></div>`}
-                        ${p.is_available === false ? '<div class="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center"><span class="px-4 py-1.5 bg-red-500 text-white text-xs font-bold rounded-lg uppercase tracking-wide">Esgotado</span></div>' : ''}
+                        ${imgUrl ? `<img src="${imgUrl}" alt="${p.nome}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\\'product-fallback w-full h-full flex items-center justify-center\\'><i data-lucide=\\'image\\' class=\\'w-12 h-12 text-gray-300\\'></i></div>'; lucide.createIcons();">` : `<div class="product-fallback w-full h-full flex items-center justify-center"><i data-lucide="image" class="w-12 h-12 text-gray-300"></i></div>`}
+                        ${p.esta_disponivel === false ? '<div class="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center"><span class="px-4 py-1.5 bg-red-500 text-white text-xs font-bold rounded-lg uppercase tracking-wide">Esgotado</span></div>' : ''}
                     </div>
                     <div class="p-5 flex flex-col flex-grow relative">
-                        <h3 class="font-bold text-gray-800 text-lg mb-2 group-hover:text-red-500 transition-colors">${p.name}</h3>
-                        <p class="text-sm text-gray-500 line-clamp-3 mb-4 flex-grow">${p.description || ''}</p>
+                        <h3 class="font-bold text-gray-800 text-lg mb-2 group-hover:text-red-500 transition-colors">${p.nome}</h3>
+                        <p class="text-sm text-gray-500 line-clamp-3 mb-4 flex-grow">${p.descricao || ''}</p>
                         <div class="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
                             <span class="text-xl font-extrabold text-red-500">${priceFormatted}</span>
                             <div class="w-10 h-10 rounded-full bg-red-50 text-red-500 flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-colors">
@@ -285,23 +285,23 @@
 
     // Modal Functions
     function openProductModal(p) {
-        if (p.is_available === false) { showToast('Este produto está esgotado', 'warning'); return; }
+        if (p.esta_disponivel === false) { showToast('Este produto está esgotado', 'warning'); return; }
         
         currentProduct = p;
         pmQuantity = 1;
         
         // Populating basic data
-        document.getElementById('pm-name').textContent = p.name;
-        document.getElementById('pm-desc').textContent = p.description || 'Sem descrição detalhada.';
-        const cats = { appetizer: 'Entrada', main: 'Prato Principal', dessert: 'Sobremesa', drink: 'Bebida', combo: 'Combo' };
-        document.getElementById('pm-category').textContent = cats[p.category] || p.category;
+        document.getElementById('pm-name').textContent = p.nome;
+        document.getElementById('pm-desc').textContent = p.descricao || 'Sem descrição detalhada.';
+        const cats = { entrada: 'Entrada', principal: 'Prato Principal', sobremesa: 'Sobremesa', bebida: 'Bebida', combo: 'Combo' };
+        document.getElementById('pm-category').textContent = cats[p.categoria] || p.categoria;
         
         // Restaurant details
         const r = restaurantData;
-        document.getElementById('pm-delivery-time').textContent = r.estimated_delivery_time || '40-50 min';
-        const deliveryFee = r.delivery_fee > 0 ? formatMoney(r.delivery_fee) : 'Entrega Grátis';
+        document.getElementById('pm-delivery-time').textContent = r.tempo_entrega_estimado || '40-50 min';
+        const deliveryFee = r.taxa_entrega > 0 ? formatMoney(r.taxa_entrega) : 'Entrega Grátis';
         document.getElementById('pm-delivery-fee-text').textContent = deliveryFee;
-        document.getElementById('pm-rating').textContent = (r.rating?.average || 5.0).toFixed(1);
+        document.getElementById('pm-rating').textContent = (r.avaliacao?.media || 5.0).toFixed(1);
         
         // Images / Gallery
         const gallery = document.getElementById('pm-gallery');
@@ -310,8 +310,8 @@
         
         // Extract all unique image URLs
         let allImages = [];
-        if (p.images && p.images.length > 0) allImages = p.images.map(getImageUrl).filter(Boolean);
-        else if (p.image_url) allImages = [getImageUrl(p.image_url)].filter(Boolean);
+        if (p.imagens && p.imagens.length > 0) allImages = p.imagens.map(getImageUrl).filter(Boolean);
+        else if (p.imagem_url) allImages = [getImageUrl(p.imagem_url)].filter(Boolean);
         
         gallery.innerHTML = '';
         if (allImages.length > 0) {
@@ -375,8 +375,8 @@
     function changePmQty(delta) {
         pmQuantity += delta;
         if (pmQuantity < 1) pmQuantity = 1;
-        if (currentProduct.stock !== -1 && pmQuantity > currentProduct.stock) {
-            pmQuantity = currentProduct.stock;
+        if (currentProduct.estoque !== -1 && pmQuantity > currentProduct.estoque) {
+            pmQuantity = currentProduct.estoque;
             showToast('Estoque máximo atingido', 'warning');
         }
         document.getElementById('pm-qty').textContent = pmQuantity;
@@ -385,7 +385,7 @@
 
     function updatePmTotal() {
         if (!currentProduct) return;
-        const total = (currentProduct.price || 0) * pmQuantity;
+        const total = (currentProduct.preco || 0) * pmQuantity;
         document.getElementById('pm-total').textContent = formatMoney(total);
         document.getElementById('pm-qty').textContent = pmQuantity;
     }
@@ -394,12 +394,12 @@
         if (!currentProduct) return;
         // Adding with quantity to cart
         for(let i=0; i<pmQuantity; i++) {
-            Cart.add(currentProduct, restaurantData.id, restaurantData.name);
+            Cart.add(currentProduct, restaurantData.id, restaurantData.nome);
         }
         closeProductModal();
     }
 
-    function addToCart(product) { Cart.add(product, restaurantData.id, restaurantData.name); }
+    function addToCart(product) { Cart.add(product, restaurantData.id, restaurantData.nome); }
     loadRestaurant();
 </script>
 {% endblock %}

@@ -33,29 +33,29 @@ const CEPHelper = {
             if (val.replace(/\D/g, '').length === 8) {
                 const data = await this.fetch(val);
                 if (data) {
-                    if (fieldMap.street) {
-                        const el = document.getElementById(fieldMap.street);
+                    if (fieldMap.rua) {
+                        const el = document.getElementById(fieldMap.rua);
                         if (el) el.value = data.logradouro || el.value;
                     }
-                    if (fieldMap.neighborhood) {
-                        const el = document.getElementById(fieldMap.neighborhood);
+                    if (fieldMap.bairro) {
+                        const el = document.getElementById(fieldMap.bairro);
                         if (el) el.value = data.bairro || el.value;
                     }
-                    if (fieldMap.city) {
-                        const el = document.getElementById(fieldMap.city);
+                    if (fieldMap.cidade) {
+                        const el = document.getElementById(fieldMap.cidade);
                         if (el) el.value = data.localidade || el.value;
                     }
-                    if (fieldMap.state) {
-                        const el = document.getElementById(fieldMap.state);
+                    if (fieldMap.estado) {
+                        const el = document.getElementById(fieldMap.estado);
                         if (el) el.value = data.uf || el.value;
                     }
-                    if (fieldMap.complement && data.complemento) {
-                        const el = document.getElementById(fieldMap.complement);
+                    if (fieldMap.complemento && data.complemento) {
+                        const el = document.getElementById(fieldMap.complemento);
                         if (el && !el.value) el.value = data.complemento;
                     }
                     
-                    if (fieldMap.number) {
-                        const numEl = document.getElementById(fieldMap.number);
+                    if (fieldMap.numero) {
+                        const numEl = document.getElementById(fieldMap.numero);
                         if (numEl) numEl.focus();
                     }
                 }

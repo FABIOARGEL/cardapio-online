@@ -55,7 +55,7 @@
             html += `
             <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-card">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 pb-3 border-b border-gray-100 gap-3">
-                    <p class="text-sm text-gray-500">Restaurante: <span class="text-red-500 font-semibold text-base">${r.name}</span></p>
+                    <p class="text-sm text-gray-500">Restaurante: <span class="text-red-500 font-semibold text-base">${r.nome}</span></p>
                     <a href="/checkout/?restaurant_id=${r.id}" class="btn-primary px-5 py-2.5 rounded-xl text-white text-sm font-semibold text-center sm:w-auto w-full">Finalizar Pedido</a>
                 </div>
                 <div class="space-y-3">
@@ -67,8 +67,8 @@
                         ${item.image_url ? `<img src="${item.image_url}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center"><i data-lucide="image" class="w-6 h-6 text-gray-400"></i></div>`}
                     </div>
                     <div class="flex-1 min-w-0">
-                        <h4 class="font-medium text-gray-800 text-sm truncate">${item.name}</h4>
-                        <p class="text-red-500 font-semibold text-sm">${formatMoney(item.price)}</p>
+                        <h4 class="font-medium text-gray-800 text-sm truncate">${item.nome}</h4>
+                        <p class="text-red-500 font-semibold text-sm">${formatMoney(item.preco)}</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <button onclick="Cart.updateQuantity('${item.product_id}', ${item.quantity - 1}); renderCart();" class="w-8 h-8 rounded-lg bg-white border border-gray-200 text-gray-600 flex items-center justify-center hover:bg-gray-50 transition-colors ${item.quantity <= 1 ? 'opacity-50' : ''}">-</button>
