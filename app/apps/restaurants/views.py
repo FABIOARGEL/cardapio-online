@@ -43,6 +43,11 @@ class RestaurantCreateView(APIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def post(self, request):
+        user_auth = JWTAuthentication().authenticate(request)
+        if not user_auth:
+            return Response({'error': 'Não autenticado.'}, status=status.HTTP_401_UNAUTHORIZED)
+        user = user_auth[0]
+
         if hasattr(request.data, 'dict'):
             data = request.data.dict()
         else:
@@ -54,6 +59,10 @@ class RestaurantCreateView(APIView):
                     data[field] = json.loads(data[field])
                 except json.JSONDecodeError:
                     pass
+        
+        if 'contato' not in data or not isinstance(data['contato'], dict):
+            data['contato'] = {}
+        data['contato']['email'] = user.email
 
         serializer = CreateRestaurantSerializer(data=data)
         serializer.is_valid(raise_exception=True)
@@ -97,6 +106,10 @@ class RestaurantDetailView(APIView):
                     data[field] = json.loads(data[field])
                 except json.JSONDecodeError:
                     pass
+
+        if 'contato' not in data or not isinstance(data['contato'], dict):
+            data['contato'] = {}
+        data['contato']['email'] = user.email
 
         serializer = UpdateRestaurantSerializer(data=data)
         serializer.is_valid(raise_exception=True)
