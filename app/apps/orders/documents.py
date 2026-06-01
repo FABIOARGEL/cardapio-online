@@ -1,134 +1,134 @@
 """
-MongoEngine Documents for Order collection.
-Schema matches doc 06-modelagem-mongodb.md.
+Documentos MongoEngine para a coleção de Pedidos (orders).
+Schema conforme doc 06-modelagem-mongodb.md.
 """
 from datetime import datetime, timezone
 import mongoengine as me
 
 
-class OrderItem(me.EmbeddedDocument):
-    """Embedded order item — snapshot of product at time of order."""
-    product_id = me.ObjectIdField(required=True)
-    name = me.StringField(required=True)
-    price = me.DecimalField(required=True, precision=2)
-    quantity = me.IntField(required=True, min_value=1, max_value=99)
+class ItemPedido(me.EmbeddedDocument):
+    """Item do pedido — snapshot do produto no momento do pedido."""
+    produto_id = me.ObjectIdField(required=True)
+    nome = me.StringField(required=True)
+    preco = me.DecimalField(required=True, precision=2)
+    quantidade = me.IntField(required=True, min_value=1, max_value=99)
     subtotal = me.DecimalField(required=True, precision=2)
-    image_url = me.StringField()
+    imagem_url = me.StringField()
     meta = {'strict': False}
 
 
-class StatusChange(me.EmbeddedDocument):
-    """Record of a status transition."""
+class MudancaStatus(me.EmbeddedDocument):
+    """Registro de uma transição de status."""
     status = me.StringField(required=True)
-    changed_at = me.DateTimeField(default=lambda: datetime.now(timezone.utc))
-    changed_by = me.ObjectIdField()
+    alterado_em = me.DateTimeField(default=lambda: datetime.now(timezone.utc))
+    alterado_por = me.ObjectIdField()
     meta = {'strict': False}
 
 
-class DeliveryAddress(me.EmbeddedDocument):
-    """Delivery address snapshot."""
-    street = me.StringField(max_length=200)
-    number = me.StringField(max_length=20)
-    complement = me.StringField(max_length=100)
-    neighborhood = me.StringField(max_length=100)
-    city = me.StringField(max_length=100)
-    state = me.StringField(max_length=2)
-    zip_code = me.StringField(max_length=10)
+class EnderecoEntrega(me.EmbeddedDocument):
+    """Snapshot do endereço de entrega."""
+    rua = me.StringField(max_length=200)
+    numero = me.StringField(max_length=20)
+    complemento = me.StringField(max_length=100)
+    bairro = me.StringField(max_length=100)
+    cidade = me.StringField(max_length=100)
+    estado = me.StringField(max_length=2)
+    cep = me.StringField(max_length=10)
     meta = {'strict': False}
 
 
-class Order(me.Document):
-    """Order document stored in MongoDB 'orders' collection."""
-    STATUS_CHOICES = ('pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled')
-    DELIVERY_CHOICES = ('delivery', 'pickup')
-    PAYMENT_CHOICES = ('pix', 'card', 'cash')
+class Pedido(me.Document):
+    """Documento de pedido armazenado na coleção MongoDB 'pedidos'."""
+    OPCOES_STATUS = ('pendente', 'confirmado', 'preparando', 'pronto', 'entregue', 'cancelado')
+    OPCOES_ENTREGA = ('entrega', 'retirada')
+    OPCOES_PAGAMENTO = ('pix', 'cartao', 'dinheiro')
 
-    # Valid status transitions
-    VALID_TRANSITIONS = {
-        'pending': ['confirmed', 'cancelled'],
-        'confirmed': ['preparing', 'cancelled'],
-        'preparing': ['ready', 'cancelled'],
-        'ready': ['delivered', 'cancelled'],
-        'delivered': [],
-        'cancelled': [],
+    # Transições de status válidas
+    TRANSICOES_VALIDAS = {
+        'pendente': ['confirmado', 'cancelado'],
+        'confirmado': ['preparando', 'cancelado'],
+        'preparando': ['pronto', 'cancelado'],
+        'pronto': ['entregue', 'cancelado'],
+        'entregue': [],
+        'cancelado': [],
     }
 
-    order_number = me.StringField(required=True, unique=True)
-    customer_id = me.ObjectIdField(required=True)
-    restaurant_id = me.ObjectIdField(required=True)
-    items = me.EmbeddedDocumentListField(OrderItem, required=True)
+    numero_pedido = me.StringField(required=True, unique=True)
+    cliente_id = me.ObjectIdField(required=True)
+    restaurante_id = me.ObjectIdField(required=True)
+    itens = me.EmbeddedDocumentListField(ItemPedido, required=True)
     total = me.DecimalField(required=True, precision=2, min_value=0)
-    delivery_fee = me.DecimalField(default=0, precision=2)
-    discount_amount = me.DecimalField(default=0, precision=2)
-    coupon_code = me.StringField(max_length=30)
-    status = me.StringField(required=True, choices=STATUS_CHOICES, default='pending')
-    status_history = me.EmbeddedDocumentListField(StatusChange, default=list)
-    delivery_method = me.StringField(required=True, choices=DELIVERY_CHOICES)
-    delivery_address = me.EmbeddedDocumentField(DeliveryAddress)
-    payment_method = me.StringField(required=True, choices=PAYMENT_CHOICES, default='pix')
-    notes = me.StringField(max_length=500)
-    created_at = me.DateTimeField(default=lambda: datetime.now(timezone.utc))
-    updated_at = me.DateTimeField(default=lambda: datetime.now(timezone.utc))
+    taxa_entrega = me.DecimalField(default=0, precision=2)
+    valor_desconto = me.DecimalField(default=0, precision=2)
+    codigo_cupom = me.StringField(max_length=30)
+    status = me.StringField(required=True, choices=OPCOES_STATUS, default='pendente')
+    historico_status = me.EmbeddedDocumentListField(MudancaStatus, default=list)
+    metodo_entrega = me.StringField(required=True, choices=OPCOES_ENTREGA)
+    endereco_entrega = me.EmbeddedDocumentField(EnderecoEntrega)
+    metodo_pagamento = me.StringField(required=True, choices=OPCOES_PAGAMENTO, default='pix')
+    observacoes = me.StringField(max_length=500)
+    criado_em = me.DateTimeField(default=lambda: datetime.now(timezone.utc))
+    atualizado_em = me.DateTimeField(default=lambda: datetime.now(timezone.utc))
 
     meta = {
-        'collection': 'orders',
+        'collection': 'pedidos',
         'indexes': [
-            {'fields': ['order_number'], 'unique': True},
-            {'fields': ['customer_id', '-created_at']},
-            {'fields': ['restaurant_id', 'status', '-created_at']},
+            {'fields': ['numero_pedido'], 'unique': True},
+            {'fields': ['cliente_id', '-criado_em']},
+            {'fields': ['restaurante_id', 'status', '-criado_em']},
             {'fields': ['status']},
-            {'fields': ['-created_at']},
+            {'fields': ['-criado_em']},
         ],
-        'ordering': ['-created_at'],
+        'ordering': ['-criado_em'],
         'strict': False,
     }
 
     def save(self, *args, **kwargs):
-        self.updated_at = datetime.now(timezone.utc)
+        self.atualizado_em = datetime.now(timezone.utc)
         return super().save(*args, **kwargs)
 
     def to_dict(self):
         return {
             'id': str(self.id),
-            'order_number': self.order_number,
-            'customer_id': str(self.customer_id),
-            'restaurant_id': str(self.restaurant_id),
-            'items': [
+            'numero_pedido': self.numero_pedido,
+            'cliente_id': str(self.cliente_id),
+            'restaurante_id': str(self.restaurante_id),
+            'itens': [
                 {
-                    'product_id': str(item.product_id),
-                    'name': item.name,
-                    'price': float(item.price),
-                    'quantity': item.quantity,
+                    'produto_id': str(item.produto_id),
+                    'nome': item.nome,
+                    'preco': float(item.preco),
+                    'quantidade': item.quantidade,
                     'subtotal': float(item.subtotal),
-                    'image_url': item.image_url,
+                    'imagem_url': item.imagem_url,
                 }
-                for item in self.items
+                for item in self.itens
             ],
             'total': float(self.total),
-            'delivery_fee': float(self.delivery_fee) if self.delivery_fee else 0,
-            'discount_amount': float(self.discount_amount) if self.discount_amount else 0,
-            'coupon_code': self.coupon_code,
+            'taxa_entrega': float(self.taxa_entrega) if self.taxa_entrega else 0,
+            'valor_desconto': float(self.valor_desconto) if self.valor_desconto else 0,
+            'codigo_cupom': self.codigo_cupom,
             'status': self.status,
-            'status_history': [
+            'historico_status': [
                 {
-                    'status': sh.status,
-                    'changed_at': sh.changed_at.isoformat() if sh.changed_at else None,
-                    'changed_by': str(sh.changed_by) if sh.changed_by else None,
+                    'status': hs.status,
+                    'alterado_em': hs.alterado_em.isoformat() if hs.alterado_em else None,
+                    'alterado_por': str(hs.alterado_por) if hs.alterado_por else None,
                 }
-                for sh in self.status_history
+                for hs in self.historico_status
             ],
-            'delivery_method': self.delivery_method,
-            'delivery_address': {
-                'street': self.delivery_address.street,
-                'number': self.delivery_address.number,
-                'complement': self.delivery_address.complement,
-                'neighborhood': self.delivery_address.neighborhood,
-                'city': self.delivery_address.city,
-                'state': self.delivery_address.state,
-                'zip_code': self.delivery_address.zip_code,
-            } if self.delivery_address else None,
-            'payment_method': self.payment_method,
-            'notes': self.notes,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'metodo_entrega': self.metodo_entrega,
+            'endereco_entrega': {
+                'rua': self.endereco_entrega.rua,
+                'numero': self.endereco_entrega.numero,
+                'complemento': self.endereco_entrega.complemento,
+                'bairro': self.endereco_entrega.bairro,
+                'cidade': self.endereco_entrega.cidade,
+                'estado': self.endereco_entrega.estado,
+                'cep': self.endereco_entrega.cep,
+            } if self.endereco_entrega else None,
+            'metodo_pagamento': self.metodo_pagamento,
+            'observacoes': self.observacoes,
+            'criado_em': self.criado_em.isoformat() if self.criado_em else None,
+            'atualizado_em': self.atualizado_em.isoformat() if self.atualizado_em else None,
         }

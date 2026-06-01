@@ -1,14 +1,14 @@
 """
-Order service — business logic for orders.
+Serviço de Pedidos — lógica de negócio para pedidos.
 
-Handles order creation (with price snapshot), status transitions,
-and WebSocket notifications.
+Gerencia criação de pedidos (com snapshot de preços), transições
+de status e notificações WebSocket.
 
-Refactored to use:
-- OrderRepository
-- CouponValidator (DRY)
-- Domain-specific exceptions
-- Dependency injection
+Refatorado para usar:
+- RepositorioPedido
+- ValidadorCupom (DRY)
+- Exceções de domínio
+- Injeção de dependência
 """
 from __future__ import annotations
 
@@ -20,241 +20,241 @@ from bson import ObjectId
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
-from apps.core.enums import OrderStatus, DeliveryMethod
+from apps.core.enums import StatusPedido, MetodoEntrega
 from apps.core.exceptions import InvalidStatusTransition, ResourceNotFoundError
-from apps.core.utils import generate_order_number, sanitize_input
+from apps.core.utils import gerar_numero_pedido, sanitize_input
 from apps.core.validators import CouponValidator
-from apps.orders.documents import Order, OrderItem, StatusChange, DeliveryAddress
-from apps.orders.repositories import OrderRepository
-from apps.restaurants.documents import Restaurant
-from apps.restaurants.repositories import RestaurantRepository
+from apps.orders.documents import Pedido, ItemPedido, MudancaStatus, EnderecoEntrega
+from apps.orders.repositories import RepositorioPedido
+from apps.restaurants.documents import Restaurante
+from apps.restaurants.repositories import RepositorioRestaurante
 
 logger = logging.getLogger(__name__)
 
 
-class OrderService:
-    """Service containing all order business logic."""
+class ServicoPedido:
+    """Serviço contendo toda a lógica de negócio de pedidos."""
 
     def __init__(
         self,
-        order_repo: OrderRepository | None = None,
-        restaurant_repo: RestaurantRepository | None = None,
+        repo_pedido: RepositorioPedido | None = None,
+        repo_restaurante: RepositorioRestaurante | None = None,
     ) -> None:
-        self.order_repo = order_repo or OrderRepository()
-        self.restaurant_repo = restaurant_repo or RestaurantRepository()
+        self.repo_pedido = repo_pedido or RepositorioPedido()
+        self.repo_restaurante = repo_restaurante or RepositorioRestaurante()
 
-    def create_order(self, customer_id: str, data: dict) -> dict:
+    def criar_pedido(self, cliente_id: str, dados: dict) -> dict:
         """
-        Create a new order with price snapshots.
+        Cria um novo pedido com snapshots de preço.
 
-        1. Validates restaurant exists and is active
-        2. Validates all products exist and are available
-        3. Snapshots current prices
-        4. Validates coupon (using CouponValidator — DRY)
-        5. Creates order with status 'pending'
-        6. Notifies restaurant via WebSocket
+        1. Valida que o restaurante existe e está ativo
+        2. Valida que todos os produtos existem e estão disponíveis
+        3. Faz snapshot dos preços atuais
+        4. Valida cupom (usando ValidadorCupom — DRY)
+        5. Cria pedido com status 'pendente'
+        6. Notifica restaurante via WebSocket
         """
-        restaurant = self.restaurant_repo.find_active_by_id(data['restaurant_id'])
-        if not restaurant:
+        restaurante = self.repo_restaurante.buscar_ativo_por_id(dados['restaurante_id'])
+        if not restaurante:
             raise ResourceNotFoundError('Restaurante')
 
-        # Build product lookup from embedded products
-        product_map = {str(p._id): p for p in restaurant.products}
+        # Construir lookup de produtos embutidos
+        mapa_produtos = {str(p._id): p for p in restaurante.produtos}
 
-        # Validate and snapshot items
-        order_items: list[OrderItem] = []
+        # Validar e snapshot dos itens
+        itens_pedido: list[ItemPedido] = []
         subtotal = Decimal('0.00')
 
-        for item_data in data['items']:
-            product = product_map.get(item_data['product_id'])
-            if not product:
-                raise ValueError(f"Produto '{item_data['product_id']}' não encontrado.")
-            if not product.is_available:
-                raise ValueError(f"Produto '{product.name}' não está disponível.")
+        for item_dados in dados['itens']:
+            produto = mapa_produtos.get(item_dados['produto_id'])
+            if not produto:
+                raise ValueError(f"Produto '{item_dados['produto_id']}' não encontrado.")
+            if not produto.esta_disponivel:
+                raise ValueError(f"Produto '{produto.nome}' não está disponível.")
 
-            quantity = item_data['quantity']
-            price = Decimal(str(product.price))
-            item_subtotal = price * quantity
+            quantidade = item_dados['quantidade']
+            preco = Decimal(str(produto.preco))
+            subtotal_item = preco * quantidade
 
-            order_items.append(OrderItem(
-                product_id=ObjectId(item_data['product_id']),
-                name=product.name,
-                price=price,
-                quantity=quantity,
-                subtotal=item_subtotal,
-                image_url=product.image_url,
+            itens_pedido.append(ItemPedido(
+                produto_id=ObjectId(item_dados['produto_id']),
+                nome=produto.nome,
+                preco=preco,
+                quantidade=quantidade,
+                subtotal=subtotal_item,
+                imagem_url=produto.imagem_url,
             ))
-            subtotal += item_subtotal
+            subtotal += subtotal_item
 
-        # Delivery fee
-        delivery_fee = Decimal('0.00')
-        if data['delivery_method'] == DeliveryMethod.DELIVERY:
-            delivery_fee = Decimal(str(restaurant.delivery_fee or 0))
+        # Taxa de entrega
+        taxa_entrega = Decimal('0.00')
+        if dados['metodo_entrega'] == MetodoEntrega.ENTREGA:
+            taxa_entrega = Decimal(str(restaurante.taxa_entrega or 0))
 
-        # Coupon validation (using centralized CouponValidator — DRY)
-        discount_amount, coupon_code = CouponValidator.validate_and_calculate(
-            coupon_code=data.get('coupon_code', ''),
-            coupons=restaurant.coupons,
+        # Validação de cupom (usando ValidadorCupom centralizado — DRY)
+        valor_desconto, codigo_cupom = CouponValidator.validate_and_calculate(
+            coupon_code=dados.get('codigo_cupom', ''),
+            coupons=restaurante.cupons,
             cart_total=subtotal,
         )
 
-        # Increment coupon usage if valid
-        if coupon_code:
-            coupon = next((c for c in restaurant.coupons if c.code == coupon_code), None)
-            if coupon:
-                coupon.used_count += 1
+        # Incrementar uso do cupom se válido
+        if codigo_cupom:
+            cupom = next((c for c in restaurante.cupons if c.codigo == codigo_cupom), None)
+            if cupom:
+                cupom.contagem_usos += 1
 
-        # Build delivery address
-        delivery_address = None
-        if data['delivery_method'] == DeliveryMethod.DELIVERY and data.get('delivery_address'):
-            delivery_address = DeliveryAddress(**data['delivery_address'])
+        # Construir endereço de entrega
+        endereco_entrega = None
+        if dados['metodo_entrega'] == MetodoEntrega.ENTREGA and dados.get('endereco_entrega'):
+            endereco_entrega = EnderecoEntrega(**dados['endereco_entrega'])
 
-        final_total = subtotal + delivery_fee - discount_amount
+        total_final = subtotal + taxa_entrega - valor_desconto
 
-        order = Order(
-            order_number=generate_order_number(),
-            customer_id=ObjectId(customer_id),
-            restaurant_id=ObjectId(data['restaurant_id']),
-            items=order_items,
-            total=final_total,
-            delivery_fee=delivery_fee,
-            discount_amount=discount_amount,
-            coupon_code=coupon_code,
-            payment_method=data.get('payment_method', 'pix'),
-            status=OrderStatus.PENDING,
-            status_history=[StatusChange(
-                status=OrderStatus.PENDING,
-                changed_at=datetime.now(timezone.utc),
-                changed_by=ObjectId(customer_id),
+        pedido = Pedido(
+            numero_pedido=gerar_numero_pedido(),
+            cliente_id=ObjectId(cliente_id),
+            restaurante_id=ObjectId(dados['restaurante_id']),
+            itens=itens_pedido,
+            total=total_final,
+            taxa_entrega=taxa_entrega,
+            valor_desconto=valor_desconto,
+            codigo_cupom=codigo_cupom,
+            metodo_pagamento=dados.get('metodo_pagamento', 'pix'),
+            status=StatusPedido.PENDENTE,
+            historico_status=[MudancaStatus(
+                status=StatusPedido.PENDENTE,
+                alterado_em=datetime.now(timezone.utc),
+                alterado_por=ObjectId(cliente_id),
             )],
-            delivery_method=data['delivery_method'],
-            delivery_address=delivery_address,
-            notes=sanitize_input(data.get('notes', '')),
+            metodo_entrega=dados['metodo_entrega'],
+            endereco_entrega=endereco_entrega,
+            observacoes=sanitize_input(dados.get('observacoes', '')),
         )
-        self.order_repo.save(order)
-        self.restaurant_repo.save(restaurant)  # Save coupon usage
+        self.repo_pedido.salvar(pedido)
+        self.repo_restaurante.save(restaurante)  # Salvar uso do cupom
 
         logger.info(
-            "Order %s created by customer %s for restaurant %s (total=%.2f)",
-            order.order_number, customer_id, data['restaurant_id'], float(final_total),
+            "Pedido %s criado pelo cliente %s para restaurante %s (total=%.2f)",
+            pedido.numero_pedido, cliente_id, dados['restaurante_id'], float(total_final),
         )
 
-        # Notify restaurant via WebSocket
-        self._notify_restaurant(str(restaurant.id), order.to_dict())
+        # Notificar restaurante via WebSocket
+        self._notificar_restaurante(str(restaurante.id), pedido.to_dict())
 
-        return order.to_dict()
+        return pedido.to_dict()
 
-    def update_status(
+    def atualizar_status(
         self,
-        order_id: str,
-        new_status: str,
-        changed_by: str,
-        reason: str | None = None,
+        pedido_id: str,
+        novo_status: str,
+        alterado_por: str,
+        motivo: str | None = None,
     ) -> dict:
         """
-        Update order status following the state machine.
+        Atualiza o status do pedido seguindo a máquina de estados.
 
-        Valid transitions are defined in OrderStatus.valid_transitions().
+        Transições válidas são definidas em StatusPedido.transicoes_validas().
         """
-        order = self.order_repo.find_by_id(order_id)
-        if not order:
+        pedido = self.repo_pedido.buscar_por_id(pedido_id)
+        if not pedido:
             raise ResourceNotFoundError('Pedido')
 
-        # Validate transition using enum
-        current = OrderStatus(order.status)
-        if not current.can_transition_to(new_status):
-            raise InvalidStatusTransition(order.status, new_status)
+        # Validar transição usando enum
+        atual = StatusPedido(pedido.status)
+        if not atual.pode_transitar_para(novo_status):
+            raise InvalidStatusTransition(pedido.status, novo_status)
 
-        order.status = new_status
-        order.status_history.append(StatusChange(
-            status=new_status,
-            changed_at=datetime.now(timezone.utc),
-            changed_by=ObjectId(changed_by),
+        pedido.status = novo_status
+        pedido.historico_status.append(MudancaStatus(
+            status=novo_status,
+            alterado_em=datetime.now(timezone.utc),
+            alterado_por=ObjectId(alterado_por),
         ))
 
-        if new_status == OrderStatus.CANCELLED and reason:
-            order.notes = f"{order.notes}\n[CANCELAMENTO]: {sanitize_input(reason)}".strip()
+        if novo_status == StatusPedido.CANCELADO and motivo:
+            pedido.observacoes = f"{pedido.observacoes}\n[CANCELAMENTO]: {sanitize_input(motivo)}".strip()
 
-        self.order_repo.save(order)
+        self.repo_pedido.salvar(pedido)
 
-        logger.info("Order %s status: %s → %s (by %s)", order.order_number, current, new_status, changed_by)
+        logger.info("Pedido %s status: %s → %s (por %s)", pedido.numero_pedido, atual, novo_status, alterado_por)
 
-        # Notify client via WebSocket
-        self._notify_customer(str(order.id), order.to_dict())
+        # Notificar cliente via WebSocket
+        self._notificar_cliente(str(pedido.id), pedido.to_dict())
 
-        return order.to_dict()
+        return pedido.to_dict()
 
-    def get_order(self, order_id: str) -> dict | None:
-        """Get an order by ID."""
-        order = self.order_repo.find_by_id(order_id)
-        return order.to_dict() if order else None
+    def buscar_pedido(self, pedido_id: str) -> dict | None:
+        """Busca um pedido por ID."""
+        pedido = self.repo_pedido.buscar_por_id(pedido_id)
+        return pedido.to_dict() if pedido else None
 
-    def get_order_by_number(self, order_number: str) -> dict | None:
-        """Get an order by its human-readable number."""
-        order = self.order_repo.find_by_order_number(order_number)
-        return order.to_dict() if order else None
+    def buscar_pedido_por_numero(self, numero_pedido: str) -> dict | None:
+        """Busca um pedido pelo seu número legível."""
+        pedido = self.repo_pedido.buscar_por_numero_pedido(numero_pedido)
+        return pedido.to_dict() if pedido else None
 
-    def list_customer_orders(self, customer_id: str, page: int = 1, page_size: int = 10) -> dict:
-        """List orders for a customer."""
-        result = self.order_repo.find_by_customer(customer_id, page=page, page_size=page_size)
-        return result.to_dict()
+    def listar_pedidos_cliente(self, cliente_id: str, pagina: int = 1, tamanho_pagina: int = 10) -> dict:
+        """Lista pedidos de um cliente."""
+        resultado = self.repo_pedido.buscar_por_cliente(cliente_id, pagina=pagina, tamanho_pagina=tamanho_pagina)
+        return resultado.to_dict()
 
-    def list_restaurant_orders(
+    def listar_pedidos_restaurante(
         self,
-        restaurant_id: str,
-        status_filter: str | None = None,
-        page: int = 1,
-        page_size: int = 20,
+        restaurante_id: str,
+        filtro_status: str | None = None,
+        pagina: int = 1,
+        tamanho_pagina: int = 20,
     ) -> dict:
-        """List orders for a restaurant."""
-        result = self.order_repo.find_by_restaurant(
-            restaurant_id, status_filter=status_filter, page=page, page_size=page_size,
+        """Lista pedidos de um restaurante."""
+        resultado = self.repo_pedido.buscar_por_restaurante(
+            restaurante_id, filtro_status=filtro_status, pagina=pagina, tamanho_pagina=tamanho_pagina,
         )
-        return result.to_dict()
+        return resultado.to_dict()
 
-    def validate_coupon(self, restaurant_id: str, code: str, cart_total: float) -> dict:
-        """Validate a coupon code and calculate discount (uses CouponValidator — DRY)."""
-        restaurant = self.restaurant_repo.find_by_id(restaurant_id)
-        if not restaurant:
+    def validar_cupom(self, restaurante_id: str, codigo: str, total_carrinho: float) -> dict:
+        """Valida um código de cupom e calcula desconto (usa ValidadorCupom — DRY)."""
+        restaurante = self.repo_restaurante.find_by_id(restaurante_id)
+        if not restaurante:
             raise ResourceNotFoundError('Restaurante')
 
-        discount_amount, validated_code = CouponValidator.validate_and_calculate(
-            coupon_code=code,
-            coupons=restaurant.coupons,
-            cart_total=Decimal(str(cart_total)),
+        valor_desconto, codigo_validado = CouponValidator.validate_and_calculate(
+            coupon_code=codigo,
+            coupons=restaurante.cupons,
+            cart_total=Decimal(str(total_carrinho)),
         )
 
-        coupon = next((c for c in restaurant.coupons if c.code == validated_code), None)
+        cupom = next((c for c in restaurante.cupons if c.codigo == codigo_validado), None)
 
         return {
-            'valid': True,
-            'code': validated_code,
-            'discount_amount': float(discount_amount),
-            'discount_type': coupon.discount_type if coupon else '',
-            'description': coupon.description if coupon else '',
+            'valido': True,
+            'codigo': codigo_validado,
+            'valor_desconto': float(valor_desconto),
+            'tipo_desconto': cupom.tipo_desconto if cupom else '',
+            'descricao': cupom.descricao if cupom else '',
         }
 
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # WebSocket notifications
+    # Notificações WebSocket
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    def _notify_restaurant(self, restaurant_id: str, order_data: dict) -> None:
-        """Send new order notification to restaurant via WebSocket."""
+    def _notificar_restaurante(self, restaurante_id: str, dados_pedido: dict) -> None:
+        """Envia notificação de novo pedido ao restaurante via WebSocket."""
         try:
             channel_layer = get_channel_layer()
             async_to_sync(channel_layer.group_send)(
-                f'restaurant_{restaurant_id}',
-                {'type': 'order.new', 'data': order_data},
+                f'restaurant_{restaurante_id}',
+                {'type': 'order.new', 'data': dados_pedido},
             )
         except Exception as e:
-            logger.debug("WebSocket notification failed (best-effort): %s", e)
+            logger.debug("Notificação WebSocket falhou (best-effort): %s", e)
 
-    def _notify_customer(self, order_id: str, order_data: dict) -> None:
-        """Send status update to customer via WebSocket."""
+    def _notificar_cliente(self, pedido_id: str, dados_pedido: dict) -> None:
+        """Envia atualização de status ao cliente via WebSocket."""
         try:
             channel_layer = get_channel_layer()
             async_to_sync(channel_layer.group_send)(
-                f'order_{order_id}',
-                {'type': 'order.status_update', 'data': order_data},
+                f'order_{pedido_id}',
+                {'type': 'order.status_update', 'data': dados_pedido},
             )
         except Exception as e:
-            logger.debug("WebSocket notification failed (best-effort): %s", e)
+            logger.debug("Notificação WebSocket falhou (best-effort): %s", e)

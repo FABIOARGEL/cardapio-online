@@ -1,9 +1,9 @@
 """
-Order API views.
+Views da API de Pedidos.
 
-Refactored:
-- Proper ownership checks with domain exceptions
-- No generic except clauses
+Refatorado:
+- Verificações de ownership com exceções de domínio
+- Sem cláusulas except genéricas
 """
 from __future__ import annotations
 
@@ -12,149 +12,149 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from apps.core.authentication import JWTAuthentication
-from apps.core.enums import OrderStatus, UserRole
+from apps.core.enums import StatusPedido, PerfilUsuario
 from apps.core.permissions import IsAuthenticated
 from apps.orders.serializers import (
-    CreateOrderSerializer,
-    UpdateOrderStatusSerializer,
-    ValidateCouponSerializer,
+    CriarPedidoSerializer,
+    AtualizarStatusPedidoSerializer,
+    ValidarCupomSerializer,
 )
-from apps.orders.services import OrderService
-from apps.restaurants.repositories import RestaurantRepository
+from apps.orders.services import ServicoPedido
+from apps.restaurants.repositories import RepositorioRestaurante
 
 
-class OrderListView(APIView):
+class ListaPedidosView(APIView):
     """GET / POST /api/orders/"""
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """List orders for the authenticated user (customer or owner)."""
-        service = OrderService()
-        page = int(request.query_params.get('page', 1))
-        user = request.user
+        """Lista pedidos do usuário autenticado (cliente ou dono)."""
+        servico = ServicoPedido()
+        pagina = int(request.query_params.get('page', 1))
+        usuario = request.user
 
-        if user.role == UserRole.CUSTOMER:
-            result = service.list_customer_orders(str(user.id), page=page)
+        if usuario.papel == PerfilUsuario.CLIENTE:
+            resultado = servico.listar_pedidos_cliente(str(usuario.id), pagina=pagina)
         else:
-            restaurant_id = request.query_params.get('restaurant_id')
-            if not restaurant_id:
+            restaurante_id = request.query_params.get('restaurant_id')
+            if not restaurante_id:
                 return Response(
                     {'error': 'restaurant_id é obrigatório.'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            status_filter = request.query_params.get('status')
-            result = service.list_restaurant_orders(
-                restaurant_id, status_filter=status_filter, page=page,
+            filtro_status = request.query_params.get('status')
+            resultado = servico.listar_pedidos_restaurante(
+                restaurante_id, filtro_status=filtro_status, pagina=pagina,
             )
-        return Response(result)
+        return Response(resultado)
 
     def post(self, request):
-        """Create a new order (customer only)."""
-        if request.user.role != UserRole.CUSTOMER:
+        """Cria um novo pedido (somente clientes)."""
+        if request.user.papel != PerfilUsuario.CLIENTE:
             return Response(
                 {'error': 'Apenas clientes podem criar pedidos.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        serializer = CreateOrderSerializer(data=request.data)
+        serializer = CriarPedidoSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        service = OrderService()
-        result = service.create_order(
-            customer_id=str(request.user.id),
-            data=serializer.validated_data,
+        servico = ServicoPedido()
+        resultado = servico.criar_pedido(
+            cliente_id=str(request.user.id),
+            dados=serializer.validated_data,
         )
-        return Response(result, status=status.HTTP_201_CREATED)
+        return Response(resultado, status=status.HTTP_201_CREATED)
 
 
-class OrderDetailView(APIView):
+class DetalhePedidoView(APIView):
     """GET /api/orders/:id/"""
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, order_id):
-        service = OrderService()
-        result = service.get_order(order_id)
-        if not result:
+        servico = ServicoPedido()
+        resultado = servico.buscar_pedido(order_id)
+        if not resultado:
             return Response(
                 {'error': 'Pedido não encontrado.'},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # Ownership check
-        if request.user.role == UserRole.CUSTOMER:
-            if str(result['customer_id']) != str(request.user.id):
+        # Verificação de ownership
+        if request.user.papel == PerfilUsuario.CLIENTE:
+            if str(resultado['cliente_id']) != str(request.user.id):
                 return Response(
                     {'error': 'Acesso negado.'},
                     status=status.HTTP_403_FORBIDDEN,
                 )
-        elif request.user.role == UserRole.OWNER:
-            repo = RestaurantRepository()
-            restaurant = repo.find_by_id_and_owner(result['restaurant_id'], str(request.user.id))
-            if not restaurant:
+        elif request.user.papel == PerfilUsuario.DONO:
+            repo = RepositorioRestaurante()
+            restaurante = repo.buscar_por_id_e_dono(resultado['restaurante_id'], str(request.user.id))
+            if not restaurante:
                 return Response(
                     {'error': 'Acesso negado.'},
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
-        return Response(result)
+        return Response(resultado)
 
 
-class OrderStatusView(APIView):
+class StatusPedidoView(APIView):
     """PATCH /api/orders/:id/status/"""
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, order_id):
-        serializer = UpdateOrderStatusSerializer(data=request.data)
+        serializer = AtualizarStatusPedidoSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        service = OrderService()
+        servico = ServicoPedido()
 
-        # Fetch order for permission check
-        order = service.get_order(order_id)
-        if not order:
+        # Buscar pedido para verificação de permissão
+        pedido = servico.buscar_pedido(order_id)
+        if not pedido:
             return Response(
                 {'error': 'Pedido não encontrado.'},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        new_status = serializer.validated_data['status']
+        novo_status = serializer.validated_data['status']
 
-        # Role-based permission check
-        if request.user.role == UserRole.CUSTOMER:
-            if str(order['customer_id']) != str(request.user.id):
+        # Verificação de permissão por perfil
+        if request.user.papel == PerfilUsuario.CLIENTE:
+            if str(pedido['cliente_id']) != str(request.user.id):
                 return Response({'error': 'Acesso negado.'}, status=status.HTTP_403_FORBIDDEN)
-            if new_status != OrderStatus.CANCELLED:
+            if novo_status != StatusPedido.CANCELADO:
                 return Response(
                     {'error': 'Clientes só podem cancelar pedidos.'},
                     status=status.HTTP_403_FORBIDDEN,
                 )
-        elif request.user.role == UserRole.OWNER:
-            repo = RestaurantRepository()
-            restaurant = repo.find_by_id_and_owner(order['restaurant_id'], str(request.user.id))
-            if not restaurant:
+        elif request.user.papel == PerfilUsuario.DONO:
+            repo = RepositorioRestaurante()
+            restaurante = repo.buscar_por_id_e_dono(pedido['restaurante_id'], str(request.user.id))
+            if not restaurante:
                 return Response({'error': 'Acesso negado.'}, status=status.HTTP_403_FORBIDDEN)
 
-        result = service.update_status(
-            order_id=order_id,
-            new_status=new_status,
-            changed_by=str(request.user.id),
-            reason=serializer.validated_data.get('cancellation_reason'),
+        resultado = servico.atualizar_status(
+            pedido_id=order_id,
+            novo_status=novo_status,
+            alterado_por=str(request.user.id),
+            motivo=serializer.validated_data.get('motivo_cancelamento'),
         )
-        return Response(result)
+        return Response(resultado)
 
 
-class ValidateCouponView(APIView):
+class ValidarCupomView(APIView):
     """POST /api/orders/validate-coupon/"""
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = ValidateCouponSerializer(data=request.data)
+        serializer = ValidarCupomSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        service = OrderService()
-        result = service.validate_coupon(
-            serializer.validated_data['restaurant_id'],
-            serializer.validated_data['code'],
-            float(serializer.validated_data['cart_total']),
+        servico = ServicoPedido()
+        resultado = servico.validar_cupom(
+            serializer.validated_data['restaurante_id'],
+            serializer.validated_data['codigo'],
+            float(serializer.validated_data['total_carrinho']),
         )
-        return Response(result)
+        return Response(resultado)

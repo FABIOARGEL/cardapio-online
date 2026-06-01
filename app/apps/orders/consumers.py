@@ -65,7 +65,7 @@ class OrderConsumer(AuthenticatedWebsocketConsumer):
 
         # Authenticate
         payload = await self.authenticate()
-        if not payload or payload.get('role') != 'owner':
+        if not payload or payload.get('papel') != 'dono':
             logger.warning("Unauthorized WebSocket connection attempt to restaurant %s", self.restaurant_id)
             await self.close(code=4001)
             return

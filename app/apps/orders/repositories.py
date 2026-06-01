@@ -1,5 +1,5 @@
 """
-Order repository — centralized database access for Order documents.
+Repositório de Pedidos — acesso centralizado ao banco para documentos Pedido.
 """
 from __future__ import annotations
 
@@ -9,242 +9,250 @@ from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 
 from apps.core.base_repository import BaseRepository, PaginatedResult
-from apps.orders.documents import Order
+from apps.orders.documents import Pedido
 
 logger = logging.getLogger(__name__)
 
 
-class OrderRepository(BaseRepository[Order]):
-    """Repository for Order document queries."""
+class RepositorioPedido(BaseRepository[Pedido]):
+    """Repositório para consultas no documento Pedido."""
 
-    document_class = Order
+    document_class = Pedido
 
-    def find_by_order_number(self, order_number: str) -> Order | None:
-        """Find an order by its human-readable order number."""
-        return self.find_one(order_number=order_number)
+    def buscar_por_numero_pedido(self, numero_pedido: str) -> Pedido | None:
+        """Busca um pedido pelo seu número legível."""
+        return self.find_one(numero_pedido=numero_pedido)
 
-    def find_by_customer(
-        self, customer_id: str, page: int = 1, page_size: int = 10,
+    def buscar_por_cliente(
+        self, cliente_id: str, pagina: int = 1, tamanho_pagina: int = 10,
     ) -> PaginatedResult:
-        """List orders for a customer."""
+        """Lista pedidos de um cliente."""
         return self.paginate(
-            page=page, page_size=page_size,
-            customer_id=ObjectId(customer_id),
+            page=pagina, page_size=tamanho_pagina,
+            cliente_id=ObjectId(cliente_id),
         )
 
-    def find_by_restaurant(
+    def buscar_por_restaurante(
         self,
-        restaurant_id: str,
-        status_filter: str | None = None,
-        page: int = 1,
-        page_size: int = 20,
+        restaurante_id: str,
+        filtro_status: str | None = None,
+        pagina: int = 1,
+        tamanho_pagina: int = 20,
     ) -> PaginatedResult:
-        """List orders for a restaurant with optional status filter."""
-        filters: dict = {'restaurant_id': ObjectId(restaurant_id)}
-        if status_filter:
-            filters['status'] = status_filter
-        return self.paginate(page=page, page_size=page_size, **filters)
+        """Lista pedidos de um restaurante com filtro opcional de status."""
+        filtros: dict = {'restaurante_id': ObjectId(restaurante_id)}
+        if filtro_status:
+            filtros['status'] = filtro_status
+        return self.paginate(page=pagina, page_size=tamanho_pagina, **filtros)
 
-    def get_dashboard_stats(self, restaurant_id: str) -> dict:
-        """
-        Get comprehensive dashboard statistics using a single aggregation.
+    def buscar_por_id(self, pedido_id: str) -> Pedido | None:
+        """Busca um pedido por ID."""
+        return self.find_by_id(pedido_id)
 
-        Replaces the previous approach of multiple Python-side iterations.
+    def salvar(self, pedido: Pedido) -> None:
+        """Salva um pedido no banco."""
+        pedido.save()
+
+    def obter_estatisticas_dashboard(self, restaurante_id: str) -> dict:
         """
-        rid = ObjectId(restaurant_id)
-        now = datetime.now(timezone.utc)
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        week_start = today_start - timedelta(days=now.weekday())
-        month_start = today_start.replace(day=1)
+        Obtém estatísticas abrangentes do dashboard usando uma única aggregation.
+
+        Substitui a abordagem anterior de múltiplas iterações em Python.
+        """
+        rid = ObjectId(restaurante_id)
+        agora = datetime.now(timezone.utc)
+        inicio_hoje = agora.replace(hour=0, minute=0, second=0, microsecond=0)
+        inicio_semana = inicio_hoje - timedelta(days=agora.weekday())
+        inicio_mes = inicio_hoje.replace(day=1)
 
         pipeline = [
-            {'$match': {'restaurant_id': rid}},
+            {'$match': {'restaurante_id': rid}},
             {'$facet': {
-                # Today stats
-                'today': [
-                    {'$match': {'created_at': {'$gte': today_start}, 'status': {'$ne': 'cancelled'}}},
+                # Estatísticas de hoje
+                'hoje': [
+                    {'$match': {'criado_em': {'$gte': inicio_hoje}, 'status': {'$ne': 'cancelado'}}},
                     {'$group': {
                         '_id': None,
-                        'revenue': {'$sum': {'$toDouble': '$total'}},
-                        'count': {'$sum': 1},
+                        'receita': {'$sum': {'$toDouble': '$total'}},
+                        'contagem': {'$sum': 1},
                     }},
                 ],
-                # Week stats
-                'week': [
-                    {'$match': {'created_at': {'$gte': week_start}, 'status': {'$ne': 'cancelled'}}},
+                # Estatísticas da semana
+                'semana': [
+                    {'$match': {'criado_em': {'$gte': inicio_semana}, 'status': {'$ne': 'cancelado'}}},
                     {'$group': {
                         '_id': None,
-                        'revenue': {'$sum': {'$toDouble': '$total'}},
-                        'count': {'$sum': 1},
+                        'receita': {'$sum': {'$toDouble': '$total'}},
+                        'contagem': {'$sum': 1},
                     }},
                 ],
-                # Month stats
-                'month': [
-                    {'$match': {'created_at': {'$gte': month_start}, 'status': {'$ne': 'cancelled'}}},
+                # Estatísticas do mês
+                'mes': [
+                    {'$match': {'criado_em': {'$gte': inicio_mes}, 'status': {'$ne': 'cancelado'}}},
                     {'$group': {
                         '_id': None,
-                        'revenue': {'$sum': {'$toDouble': '$total'}},
-                        'count': {'$sum': 1},
+                        'receita': {'$sum': {'$toDouble': '$total'}},
+                        'contagem': {'$sum': 1},
                     }},
                 ],
-                # Status breakdown
-                'status_counts': [
-                    {'$group': {'_id': '$status', 'count': {'$sum': 1}}},
+                # Contagem por status
+                'contagem_status': [
+                    {'$group': {'_id': '$status', 'contagem': {'$sum': 1}}},
                 ],
-                # Top products
-                'top_products': [
-                    {'$match': {'status': {'$ne': 'cancelled'}}},
-                    {'$unwind': '$items'},
+                # Produtos mais vendidos
+                'produtos_mais_vendidos': [
+                    {'$match': {'status': {'$ne': 'cancelado'}}},
+                    {'$unwind': '$itens'},
                     {'$group': {
-                        '_id': '$items.name',
-                        'quantity': {'$sum': '$items.quantity'},
+                        '_id': '$itens.nome',
+                        'quantidade': {'$sum': '$itens.quantidade'},
                     }},
-                    {'$sort': {'quantity': -1}},
+                    {'$sort': {'quantidade': -1}},
                     {'$limit': 5},
-                    {'$project': {'_id': 0, 'name': '$_id', 'quantity': 1}},
+                    {'$project': {'_id': 0, 'nome': '$_id', 'quantidade': 1}},
                 ],
-                # Daily revenue (last 7 days)
-                'daily_revenue': [
+                # Receita diária (últimos 7 dias)
+                'receita_diaria': [
                     {'$match': {
-                        'created_at': {'$gte': today_start - timedelta(days=6)},
-                        'status': {'$ne': 'cancelled'},
+                        'criado_em': {'$gte': inicio_hoje - timedelta(days=6)},
+                        'status': {'$ne': 'cancelado'},
                     }},
                     {'$group': {
-                        '_id': {'$dateToString': {'format': '%Y-%m-%d', 'date': '$created_at'}},
-                        'revenue': {'$sum': {'$toDouble': '$total'}},
-                        'orders': {'$sum': 1},
+                        '_id': {'$dateToString': {'format': '%Y-%m-%d', 'date': '$criado_em'}},
+                        'receita': {'$sum': {'$toDouble': '$total'}},
+                        'pedidos': {'$sum': 1},
                     }},
                     {'$sort': {'_id': 1}},
                 ],
-                # Recent orders
-                'recent_orders': [
-                    {'$sort': {'created_at': -1}},
+                # Pedidos recentes
+                'pedidos_recentes': [
+                    {'$sort': {'criado_em': -1}},
                     {'$limit': 5},
                 ],
-                # Total count
-                'total_count': [
+                # Contagem total
+                'contagem_total': [
                     {'$count': 'total'},
                 ],
             }},
         ]
 
-        result = self.aggregate(pipeline)
-        data = result[0] if result else {}
+        resultado = self.aggregate(pipeline)
+        dados = resultado[0] if resultado else {}
 
-        def _extract_group(key: str) -> dict:
-            items = data.get(key, [])
-            if items:
-                return {'revenue': items[0].get('revenue', 0), 'orders': items[0].get('count', 0)}
-            return {'revenue': 0, 'orders': 0}
+        def _extrair_grupo(chave: str) -> dict:
+            itens = dados.get(chave, [])
+            if itens:
+                return {'receita': itens[0].get('receita', 0), 'pedidos': itens[0].get('contagem', 0)}
+            return {'receita': 0, 'pedidos': 0}
 
-        today = _extract_group('today')
-        week = _extract_group('week')
-        month = _extract_group('month')
+        hoje = _extrair_grupo('hoje')
+        semana = _extrair_grupo('semana')
+        mes = _extrair_grupo('mes')
 
-        status_counts = {s['_id']: s['count'] for s in data.get('status_counts', [])}
+        contagem_status = {s['_id']: s['contagem'] for s in dados.get('contagem_status', [])}
 
-        # Format daily revenue with day names
-        day_names = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
-        daily_map = {d['_id']: d for d in data.get('daily_revenue', [])}
-        daily_revenue = []
+        # Formatar receita diária com nomes dos dias
+        nomes_dias = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+        mapa_diario = {d['_id']: d for d in dados.get('receita_diaria', [])}
+        receita_diaria = []
         for i in range(6, -1, -1):
-            day = today_start - timedelta(days=i)
-            day_str = day.strftime('%Y-%m-%d')
-            entry = daily_map.get(day_str, {})
-            daily_revenue.append({
-                'date': day.strftime('%d/%m'),
-                'day_name': day_names[day.weekday()],
-                'revenue': entry.get('revenue', 0),
-                'orders': entry.get('orders', 0),
+            dia = inicio_hoje - timedelta(days=i)
+            dia_str = dia.strftime('%Y-%m-%d')
+            entrada = mapa_diario.get(dia_str, {})
+            receita_diaria.append({
+                'data': dia.strftime('%d/%m'),
+                'nome_dia': nomes_dias[dia.weekday()],
+                'receita': entrada.get('receita', 0),
+                'pedidos': entrada.get('pedidos', 0),
             })
 
-        # Format recent orders
-        recent_orders = []
-        for o in data.get('recent_orders', []):
-            recent_orders.append({
-                'id': str(o.get('_id', '')),
-                'order_number': o.get('order_number', ''),
-                'status': o.get('status', ''),
-                'total': float(o.get('total', 0)),
-                'created_at': o.get('created_at', ''),
+        # Formatar pedidos recentes
+        pedidos_recentes = []
+        for p in dados.get('pedidos_recentes', []):
+            pedidos_recentes.append({
+                'id': str(p.get('_id', '')),
+                'numero_pedido': p.get('numero_pedido', ''),
+                'status': p.get('status', ''),
+                'total': float(p.get('total', 0)),
+                'criado_em': p.get('criado_em', ''),
             })
 
-        total_count = data.get('total_count', [])
-        total_all = total_count[0]['total'] if total_count else 0
+        contagem_total = dados.get('contagem_total', [])
+        total_geral = contagem_total[0]['total'] if contagem_total else 0
 
         return {
-            'today': today,
-            'week': week,
-            'month': month,
-            'ticket_average': round(month['revenue'] / month['orders'], 2) if month['orders'] else 0,
-            'status_counts': status_counts,
-            'top_products': data.get('top_products', []),
-            'daily_revenue': daily_revenue,
-            'recent_orders': recent_orders,
-            'total_orders_all_time': total_all,
+            'hoje': hoje,
+            'semana': semana,
+            'mes': mes,
+            'ticket_medio': round(mes['receita'] / mes['pedidos'], 2) if mes['pedidos'] else 0,
+            'contagem_status': contagem_status,
+            'produtos_mais_vendidos': dados.get('produtos_mais_vendidos', []),
+            'receita_diaria': receita_diaria,
+            'pedidos_recentes': pedidos_recentes,
+            'total_pedidos_geral': total_geral,
         }
 
-    def get_order_history(
+    def obter_historico_pedidos(
         self,
-        restaurant_id: str,
-        page: int = 1,
-        page_size: int = 20,
-        status_filter: str | None = None,
-        date_from: str | None = None,
-        date_to: str | None = None,
+        restaurante_id: str,
+        pagina: int = 1,
+        tamanho_pagina: int = 20,
+        filtro_status: str | None = None,
+        data_inicio: str | None = None,
+        data_fim: str | None = None,
     ) -> dict:
-        """Get paginated order history with filters and summary stats."""
-        filters: dict = {'restaurant_id': ObjectId(restaurant_id)}
+        """Obtém histórico paginado de pedidos com filtros e estatísticas resumidas."""
+        filtros: dict = {'restaurante_id': ObjectId(restaurante_id)}
 
-        if status_filter:
-            filters['status'] = status_filter
-        if date_from:
-            filters['created_at__gte'] = datetime.fromisoformat(date_from)
-        if date_to:
-            dt_to = datetime.fromisoformat(date_to) + timedelta(days=1)
-            filters['created_at__lt'] = dt_to
+        if filtro_status:
+            filtros['status'] = filtro_status
+        if data_inicio:
+            filtros['criado_em__gte'] = datetime.fromisoformat(data_inicio)
+        if data_fim:
+            dt_fim = datetime.fromisoformat(data_fim) + timedelta(days=1)
+            filtros['criado_em__lt'] = dt_fim
 
-        paginated = self.paginate(page=page, page_size=page_size, **filters)
+        paginado = self.paginate(page=pagina, page_size=tamanho_pagina, **filtros)
 
-        # Summary via aggregation
-        match_stage: dict = {'restaurant_id': rid} if (rid := ObjectId(restaurant_id)) else {}
-        if status_filter:
-            match_stage['status'] = status_filter
-        if date_from:
-            match_stage.setdefault('created_at', {})['$gte'] = datetime.fromisoformat(date_from)
-        if date_to:
-            match_stage.setdefault('created_at', {})['$lt'] = datetime.fromisoformat(date_to) + timedelta(days=1)
+        # Resumo via aggregation
+        match_stage: dict = {'restaurante_id': rid} if (rid := ObjectId(restaurante_id)) else {}
+        if filtro_status:
+            match_stage['status'] = filtro_status
+        if data_inicio:
+            match_stage.setdefault('criado_em', {})['$gte'] = datetime.fromisoformat(data_inicio)
+        if data_fim:
+            match_stage.setdefault('criado_em', {})['$lt'] = datetime.fromisoformat(data_fim) + timedelta(days=1)
 
-        summary_pipeline = [
+        pipeline_resumo = [
             {'$match': match_stage},
             {'$facet': {
-                'revenue': [
-                    {'$match': {'status': {'$ne': 'cancelled'}}},
+                'receita': [
+                    {'$match': {'status': {'$ne': 'cancelado'}}},
                     {'$group': {'_id': None, 'total': {'$sum': {'$toDouble': '$total'}}}},
                 ],
-                'delivered': [
-                    {'$match': {'status': 'delivered'}},
+                'entregues': [
+                    {'$match': {'status': 'entregue'}},
                     {'$count': 'total'},
                 ],
-                'cancelled': [
-                    {'$match': {'status': 'cancelled'}},
+                'cancelados': [
+                    {'$match': {'status': 'cancelado'}},
                     {'$count': 'total'},
                 ],
             }},
         ]
 
-        summary_result = self.aggregate(summary_pipeline)
-        summary_data = summary_result[0] if summary_result else {}
+        resultado_resumo = self.aggregate(pipeline_resumo)
+        dados_resumo = resultado_resumo[0] if resultado_resumo else {}
 
-        revenue_data = summary_data.get('revenue', [])
-        delivered_data = summary_data.get('delivered', [])
-        cancelled_data = summary_data.get('cancelled', [])
+        dados_receita = dados_resumo.get('receita', [])
+        dados_entregues = dados_resumo.get('entregues', [])
+        dados_cancelados = dados_resumo.get('cancelados', [])
 
-        result = paginated.to_dict()
-        result['summary'] = {
-            'total_revenue': revenue_data[0]['total'] if revenue_data else 0,
-            'total_delivered': delivered_data[0]['total'] if delivered_data else 0,
-            'total_cancelled': cancelled_data[0]['total'] if cancelled_data else 0,
+        resultado = paginado.to_dict()
+        resultado['resumo'] = {
+            'receita_total': dados_receita[0]['total'] if dados_receita else 0,
+            'total_entregues': dados_entregues[0]['total'] if dados_entregues else 0,
+            'total_cancelados': dados_cancelados[0]['total'] if dados_cancelados else 0,
         }
 
-        return result
+        return resultado
