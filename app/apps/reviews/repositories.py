@@ -1,49 +1,49 @@
 """
-Review repository — centralized database access for Review documents.
+Repositório de Avaliações — acesso centralizado ao banco para documentos Avaliacao.
 """
 from __future__ import annotations
 
 from bson import ObjectId
 
 from apps.core.base_repository import BaseRepository, PaginatedResult
-from apps.reviews.documents import Review
+from apps.reviews.documents import Avaliacao
 
 
-class ReviewRepository(BaseRepository[Review]):
-    """Repository for Review document queries."""
+class RepositorioAvaliacao(BaseRepository[Avaliacao]):
+    """Repositório para consultas no documento Avaliacao."""
 
-    document_class = Review
+    document_class = Avaliacao
 
-    def find_by_customer_and_order(self, customer_id: str, order_id: str) -> Review | None:
-        """Check if customer already reviewed a specific order."""
+    def buscar_por_cliente_e_pedido(self, cliente_id: str, pedido_id: str) -> Avaliacao | None:
+        """Verifica se o cliente já avaliou um pedido específico."""
         return self.find_one(
-            customer_id=ObjectId(customer_id),
-            order_id=ObjectId(order_id),
+            cliente_id=ObjectId(cliente_id),
+            pedido_id=ObjectId(pedido_id),
         )
 
-    def list_by_restaurant(
-        self, restaurant_id: str, page: int = 1, page_size: int = 10,
+    def listar_por_restaurante(
+        self, restaurante_id: str, page: int = 1, page_size: int = 10,
     ) -> PaginatedResult:
-        """List reviews for a restaurant, newest first."""
+        """Lista avaliações de um restaurante, mais recentes primeiro."""
         return self.paginate(
             page=page, page_size=page_size,
-            restaurant_id=ObjectId(restaurant_id),
+            restaurante_id=ObjectId(restaurante_id),
         )
 
-    def get_restaurant_rating(self, restaurant_id: str) -> dict:
-        """Calculate average rating for a restaurant via aggregation."""
+    def obter_avaliacao_restaurante(self, restaurante_id: str) -> dict:
+        """Calcula a nota média de um restaurante via agregação."""
         pipeline = [
-            {'$match': {'restaurant_id': ObjectId(restaurant_id)}},
+            {'$match': {'restaurante_id': ObjectId(restaurante_id)}},
             {'$group': {
                 '_id': None,
-                'average': {'$avg': '$rating'},
-                'count': {'$sum': 1},
+                'media': {'$avg': '$nota'},
+                'contagem': {'$sum': 1},
             }},
         ]
         result = self.aggregate(pipeline)
         if result:
             return {
-                'average': round(result[0]['average'], 1),
-                'count': result[0]['count'],
+                'media': round(result[0]['media'], 1),
+                'contagem': result[0]['contagem'],
             }
-        return {'average': 0.0, 'count': 0}
+        return {'media': 0.0, 'contagem': 0}

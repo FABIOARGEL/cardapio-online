@@ -1,7 +1,5 @@
 """
-Review API views.
-
-Refactored: proper authentication_classes instead of manual auth.
+Views da API de Avaliações.
 """
 from __future__ import annotations
 
@@ -10,16 +8,13 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from apps.core.authentication import JWTAuthentication
-from apps.core.permissions import IsAuthenticated
 from apps.reviews.serializers import CreateReviewSerializer
 from apps.reviews.services import ReviewService
 
 
 class ReviewListView(APIView):
-    """GET / POST /api/reviews/"""
-
     def get(self, request):
-        """List reviews for a restaurant (public)."""
+        """Lista avaliações para um restaurante (público)."""
         restaurant_id = request.query_params.get('restaurant_id')
         if not restaurant_id:
             return Response(
@@ -32,8 +27,7 @@ class ReviewListView(APIView):
         return Response(result)
 
     def post(self, request):
-        """Create a review (authenticated customer)."""
-        # Authenticate inline since GET is public and POST requires auth
+        """Cria uma avaliação (cliente autenticado)."""
         auth = JWTAuthentication()
         user_auth = auth.authenticate(request)
         if not user_auth:
@@ -49,7 +43,7 @@ class ReviewListView(APIView):
         service = ReviewService()
         result = service.create_review(
             customer_id=str(user.id),
-            customer_name=user.name,
+            customer_name=user.nome,
             **serializer.validated_data,
         )
         return Response(result, status=status.HTTP_201_CREATED)

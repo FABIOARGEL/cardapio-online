@@ -1,7 +1,5 @@
 """
-Review service — business logic for customer reviews.
-
-Refactored to use ReviewRepository.
+Serviço de Avaliações — lógica de negócio para avaliações de clientes.
 """
 from __future__ import annotations
 
@@ -11,69 +9,68 @@ from bson import ObjectId
 
 from apps.core.exceptions import ResourceNotFoundError
 from apps.core.utils import sanitize_input
-from apps.restaurants.repositories import RestaurantRepository
-from apps.reviews.documents import Review
-from apps.reviews.repositories import ReviewRepository
+from apps.restaurants.repositories import RepositorioRestaurante
+from apps.reviews.documents import Avaliacao
+from apps.reviews.repositories import RepositorioAvaliacao
 
 logger = logging.getLogger(__name__)
 
 
 class ReviewService:
-    """Service containing all review business logic."""
+    """Serviço contendo toda a lógica de negócio de avaliações."""
 
     def __init__(
         self,
-        review_repo: ReviewRepository | None = None,
-        restaurant_repo: RestaurantRepository | None = None,
+        review_repo: RepositorioAvaliacao | None = None,
+        restaurant_repo: RepositorioRestaurante | None = None,
     ) -> None:
-        self.repo = review_repo or ReviewRepository()
-        self.restaurant_repo = restaurant_repo or RestaurantRepository()
+        self.repo = review_repo or RepositorioAvaliacao()
+        self.restaurant_repo = restaurant_repo or RepositorioRestaurante()
 
     def create_review(
         self,
         customer_id: str,
         customer_name: str,
-        restaurant_id: str,
-        rating: int,
-        comment: str = '',
-        order_id: str | None = None,
+        restaurante_id: str,
+        nota: int,
+        comentario: str = '',
+        pedido_id: str | None = None,
     ) -> dict:
-        """Create a new review and update restaurant rating average."""
-        # Check duplicate review for same order
-        if order_id:
-            existing = self.repo.find_by_customer_and_order(customer_id, order_id)
+        """Cria uma nova avaliação e atualiza a média do restaurante."""
+        if pedido_id:
+            existing = self.repo.buscar_por_cliente_e_pedido(customer_id, pedido_id)
             if existing:
                 raise ValueError("Você já avaliou este pedido.")
 
-        restaurant = self.restaurant_repo.find_by_id(restaurant_id)
-        if not restaurant:
+        restaurante = self.restaurant_repo.find_by_id(restaurante_id)
+        if not restaurante:
             raise ResourceNotFoundError('Restaurante')
 
-        review = Review(
-            customer_id=ObjectId(customer_id),
-            customer_name=sanitize_input(customer_name),
-            restaurant_id=ObjectId(restaurant_id),
-            order_id=ObjectId(order_id) if order_id else None,
-            rating=rating,
-            comment=sanitize_input(comment) if comment else '',
+        avaliacao = Avaliacao(
+            cliente_id=ObjectId(customer_id),
+            nome_cliente=sanitize_input(customer_name),
+            restaurante_id=ObjectId(restaurante_id),
+            pedido_id=ObjectId(pedido_id) if pedido_id else None,
+            nota=nota,
+            comentario=sanitize_input(comentario) if comentario else '',
         )
-        self.repo.save(review)
+        self.repo.save(avaliacao)
 
-        # Update restaurant rating using aggregation (more accurate than Python-side)
-        rating_data = self.repo.get_restaurant_rating(restaurant_id)
-        restaurant.rating.average = rating_data['average']
-        restaurant.rating.count = rating_data['count']
-        self.restaurant_repo.save(restaurant)
+        # Atualiza a nota do restaurante usando agregação
+        rating_data = self.repo.obter_avaliacao_restaurante(restaurante_id)
+        restaurante.avaliacao.media = rating_data['media']
+        restaurante.avaliacao.contagem = rating_data['contagem']
+        self.restaurant_repo.save(restaurante)
 
         logger.info(
-            "Review created: customer=%s, restaurant=%s, rating=%d",
-            customer_id, restaurant_id, rating,
+            "Avaliação criada: cliente=%s, restaurante=%s, nota=%d",
+            customer_id, restaurante_id, nota,
         )
-        return review.to_dict()
+        return avaliacao.to_dict()
 
     def list_restaurant_reviews(
         self, restaurant_id: str, page: int = 1, page_size: int = 10,
     ) -> dict:
-        """List reviews for a restaurant with pagination."""
-        result = self.repo.list_by_restaurant(restaurant_id, page=page, page_size=page_size)
+        """Lista avaliações de um restaurante com paginação."""
+        result = self.repo.listar_por_restaurante(restaurant_id, page=page, page_size=page_size)
         return result.to_dict()
