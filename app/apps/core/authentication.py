@@ -1,8 +1,8 @@
 """
-JWT Authentication backend for Django REST Framework.
+Backend de Autenticação JWT para Django REST Framework.
 
-Reads the Authorization header (Bearer <token>) and validates
-the JWT token, injecting the user document into request.user.
+Lê o header Authorization (Bearer <token>) e valida
+o token JWT, injetando o documento de usuário em request.user.
 """
 import jwt
 from datetime import datetime, timezone
@@ -14,9 +14,9 @@ from rest_framework.exceptions import AuthenticationFailed
 
 class JWTAuthentication(BaseAuthentication):
     """
-    DRF authentication class that validates JWT Bearer tokens.
+    Classe de autenticação DRF que valida tokens JWT Bearer.
 
-    Usage in views:
+    Uso nas views:
         authentication_classes = [JWTAuthentication]
     """
 
@@ -26,7 +26,7 @@ class JWTAuthentication(BaseAuthentication):
         auth_header = request.META.get('HTTP_AUTHORIZATION', '')
 
         if not auth_header.startswith(f'{self.keyword} '):
-            return None  # No JWT token present, allow other auth methods
+            return None  # Sem token JWT, permitir outros métodos de auth
 
         token = auth_header[len(self.keyword) + 1:]
 
@@ -41,22 +41,22 @@ class JWTAuthentication(BaseAuthentication):
         except jwt.InvalidTokenError:
             raise AuthenticationFailed('Token inválido.')
 
-        # Check token type
+        # Verificar tipo do token
         if payload.get('type') != 'access':
             raise AuthenticationFailed('Tipo de token inválido.')
 
-        # Import here to avoid circular imports
-        from apps.authentication.documents import User
+        # Import aqui para evitar imports circulares
+        from apps.authentication.documents import Usuario
 
         try:
-            user = User.objects.get(id=payload['user_id'])
-        except User.DoesNotExist:
+            usuario = Usuario.objects.get(id=payload['user_id'])
+        except Usuario.DoesNotExist:
             raise AuthenticationFailed('Usuário não encontrado.')
 
-        if not user.is_active:
+        if not usuario.esta_ativo:
             raise AuthenticationFailed('Conta desativada.')
 
-        return (user, payload)
+        return (usuario, payload)
 
     def authenticate_header(self, request):
         return self.keyword

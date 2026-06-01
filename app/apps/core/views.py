@@ -51,9 +51,9 @@ def checkout_page(request):
     return render(request, 'orders/checkout.html')
 
 
-def order_confirmation(request, order_number: str):
-    """Order confirmation page."""
-    return render(request, 'orders/confirmation.html', {'order_number': order_number})
+def order_confirmation(request, numero_pedido: str):
+    """Página de confirmação após checkout."""
+    return render(request, 'orders/confirmation.html', {'numero_pedido': numero_pedido})
 
 
 def my_orders(request):
@@ -61,9 +61,9 @@ def my_orders(request):
     return render(request, 'orders/my_orders.html')
 
 
-def order_tracking(request, order_number: str):
-    """Real-time order tracking page."""
-    return render(request, 'orders/tracking.html', {'order_number': order_number})
+def order_tracking(request, numero_pedido: str):
+    """Página de acompanhamento do status do pedido (websockets)."""
+    return render(request, 'orders/tracking.html', {'numero_pedido': numero_pedido})
 
 
 def profile_page(request):

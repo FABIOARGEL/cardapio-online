@@ -70,7 +70,7 @@ class BaseRepository(Generic[T]):
         """Find a single document matching filters."""
         return self.document_class.objects(**filters).first()
 
-    def find_many(self, ordering: str = '-created_at', **filters: Any) -> list[T]:
+    def find_many(self, ordering: str = '-criado_em', **filters: Any) -> list[T]:
         """Find all documents matching filters with ordering."""
         return list(self.document_class.objects(**filters).order_by(ordering))
 
@@ -98,7 +98,7 @@ class BaseRepository(Generic[T]):
         self,
         page: int = 1,
         page_size: int = 12,
-        ordering: str = '-created_at',
+        ordering: str = '-criado_em',
         serializer_fn: callable | None = None,
         **filters: Any,
     ) -> PaginatedResult:

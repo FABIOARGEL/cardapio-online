@@ -1,90 +1,90 @@
 """
-Centralized enums and constants for the Cardápio Online platform.
+Enums e constantes centralizadas para a plataforma Cardápio Online.
 
-All magic strings should reference these enums for type safety
-and IDE autocompletion.
+Todas as strings fixas devem referenciar estes enums para segurança
+de tipos e autocompletar no IDE.
 """
 from __future__ import annotations
 
 from enum import StrEnum
 
 
-class UserRole(StrEnum):
-    """User role types."""
-    CUSTOMER = 'customer'
-    OWNER = 'owner'
+class PerfilUsuario(StrEnum):
+    """Tipos de perfil de usuário."""
+    CLIENTE = 'cliente'
+    DONO = 'dono'
 
 
-class RestaurantStatus(StrEnum):
-    """Restaurant operational status."""
-    ACTIVE = 'active'
-    INACTIVE = 'inactive'
-    SUSPENDED = 'suspended'
+class StatusRestaurante(StrEnum):
+    """Status operacional do restaurante."""
+    ATIVO = 'ativo'
+    INATIVO = 'inativo'
+    SUSPENSO = 'suspenso'
 
 
-class OrderStatus(StrEnum):
-    """Order lifecycle states."""
-    PENDING = 'pending'
-    CONFIRMED = 'confirmed'
-    PREPARING = 'preparing'
-    READY = 'ready'
-    DELIVERED = 'delivered'
-    CANCELLED = 'cancelled'
+class StatusPedido(StrEnum):
+    """Estados do ciclo de vida do pedido."""
+    PENDENTE = 'pendente'
+    CONFIRMADO = 'confirmado'
+    PREPARANDO = 'preparando'
+    PRONTO = 'pronto'
+    ENTREGUE = 'entregue'
+    CANCELADO = 'cancelado'
 
     @classmethod
-    def valid_transitions(cls) -> dict[str, list[str]]:
-        """Return the state machine transitions."""
+    def transicoes_validas(cls) -> dict[str, list[str]]:
+        """Retorna as transições da máquina de estados."""
         return {
-            cls.PENDING: [cls.CONFIRMED, cls.CANCELLED],
-            cls.CONFIRMED: [cls.PREPARING, cls.CANCELLED],
-            cls.PREPARING: [cls.READY, cls.CANCELLED],
-            cls.READY: [cls.DELIVERED, cls.CANCELLED],
-            cls.DELIVERED: [],
-            cls.CANCELLED: [],
+            cls.PENDENTE: [cls.CONFIRMADO, cls.CANCELADO],
+            cls.CONFIRMADO: [cls.PREPARANDO, cls.CANCELADO],
+            cls.PREPARANDO: [cls.PRONTO, cls.CANCELADO],
+            cls.PRONTO: [cls.ENTREGUE, cls.CANCELADO],
+            cls.ENTREGUE: [],
+            cls.CANCELADO: [],
         }
 
-    def can_transition_to(self, target: str) -> bool:
-        """Check if transitioning to target status is valid."""
-        return target in self.valid_transitions().get(self.value, [])
+    def pode_transitar_para(self, alvo: str) -> bool:
+        """Verifica se a transição para o status alvo é válida."""
+        return alvo in self.transicoes_validas().get(self.value, [])
 
 
-class DeliveryMethod(StrEnum):
-    """Order delivery methods."""
-    DELIVERY = 'delivery'
-    PICKUP = 'pickup'
+class MetodoEntrega(StrEnum):
+    """Métodos de entrega do pedido."""
+    ENTREGA = 'entrega'
+    RETIRADA = 'retirada'
 
 
-class PaymentMethod(StrEnum):
-    """Payment method options."""
+class MetodoPagamento(StrEnum):
+    """Opções de método de pagamento."""
     PIX = 'pix'
-    CARD = 'card'
-    CASH = 'cash'
+    CARTAO = 'cartao'
+    DINHEIRO = 'dinheiro'
 
 
-class ProductCategory(StrEnum):
-    """Product category types."""
-    APPETIZER = 'appetizer'
-    MAIN = 'main'
-    DESSERT = 'dessert'
-    DRINK = 'drink'
+class CategoriaProduto(StrEnum):
+    """Tipos de categoria de produto."""
+    ENTRADA = 'entrada'
+    PRINCIPAL = 'principal'
+    SOBREMESA = 'sobremesa'
+    BEBIDA = 'bebida'
     COMBO = 'combo'
 
 
-class DiscountType(StrEnum):
-    """Coupon discount types."""
-    PERCENTAGE = 'percentage'
-    FIXED = 'fixed'
+class TipoDesconto(StrEnum):
+    """Tipos de desconto de cupom."""
+    PORCENTAGEM = 'porcentagem'
+    FIXO = 'fixo'
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Constants
+# Constantes
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-MAX_PRODUCTS_PER_RESTAURANT = 200
-MAX_IMAGES_PER_PRODUCT = 5
-MAX_ADDRESSES_PER_USER = 10
-DEFAULT_PAGE_SIZE = 12
-MAX_PAGE_SIZE = 100
-DEFAULT_DELIVERY_TIME = '40-50 min'
+MAX_PRODUTOS_POR_RESTAURANTE = 200
+MAX_IMAGENS_POR_PRODUTO = 5
+MAX_ENDERECOS_POR_USUARIO = 10
+TAMANHO_PAGINA_PADRAO = 12
+TAMANHO_PAGINA_MAXIMO = 100
+TEMPO_ENTREGA_PADRAO = '40-50 min'
 BCRYPT_ROUNDS = 12
-MAX_LOGIN_ATTEMPTS = 5
-LOCKOUT_DURATION_MINUTES = 15
+MAX_TENTATIVAS_LOGIN = 5
+DURACAO_BLOQUEIO_MINUTOS = 15

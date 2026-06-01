@@ -21,9 +21,10 @@ urlpatterns = [
     # Customer pages (require auth)
     path('carrinho/', views.cart_page, name='cart'),
     path('checkout/', views.checkout_page, name='checkout'),
-    path('pedido/<str:order_number>/', views.order_confirmation, name='order_confirmation'),
+    path('pedido/<str:numero_pedido>/', views.order_confirmation, name='order_confirmation'),
+    # Tracking
+    path('pedido/<str:numero_pedido>/acompanhar/', views.order_tracking, name='order_tracking'),
     path('meus-pedidos/', views.my_orders, name='my_orders'),
-    path('pedido/<str:order_number>/acompanhar/', views.order_tracking, name='order_tracking'),
     path('perfil/', views.profile_page, name='profile'),
     path('enderecos/', views.addresses_page, name='addresses'),
 

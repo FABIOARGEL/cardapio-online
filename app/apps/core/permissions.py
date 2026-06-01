@@ -1,50 +1,52 @@
 """
-Custom DRF permissions for Cardápio Online.
+Permissões customizadas DRF para o Cardápio Online.
 
-Enforces role-based access control:
-- IsAuthenticated: Any authenticated user
-- IsOwner: Only restaurant owners
-- IsCustomer: Only customers
-- IsResourceOwner: Ownership verification for specific resources
+Controle de acesso baseado em papéis:
+- IsAuthenticated: Qualquer usuário autenticado
+- IsOwner: Apenas donos de restaurantes
+- IsCustomer: Apenas clientes
+- IsResourceOwner: Verificação de propriedade para recursos específicos
 """
 from rest_framework.permissions import BasePermission
 
+from apps.core.enums import PerfilUsuario
+
 
 class IsAuthenticated(BasePermission):
-    """Allow access only to authenticated users (JWT)."""
+    """Permite acesso apenas a usuários autenticados (JWT)."""
 
     def has_permission(self, request, view):
-        return request.user is not None and hasattr(request.user, 'role')
+        return request.user is not None and hasattr(request.user, 'papel')
 
 
 class IsOwner(BasePermission):
-    """Allow access only to users with role 'owner'."""
+    """Permite acesso apenas a usuários com papel 'dono'."""
 
     message = 'Apenas donos de restaurantes podem realizar esta ação.'
 
     def has_permission(self, request, view):
-        if not hasattr(request.user, 'role'):
+        if not hasattr(request.user, 'papel'):
             return False
-        return request.user.role == 'owner'
+        return request.user.papel == PerfilUsuario.DONO
 
 
 class IsCustomer(BasePermission):
-    """Allow access only to users with role 'customer'."""
+    """Permite acesso apenas a usuários com papel 'cliente'."""
 
     message = 'Apenas clientes podem realizar esta ação.'
 
     def has_permission(self, request, view):
-        if not hasattr(request.user, 'role'):
+        if not hasattr(request.user, 'papel'):
             return False
-        return request.user.role == 'customer'
+        return request.user.papel == PerfilUsuario.CLIENTE
 
 
 class IsResourceOwner(BasePermission):
     """
-    Verify that the authenticated user owns the resource being accessed.
+    Verifica se o usuário autenticado é o dono do recurso acessado.
 
-    The view must implement a `get_owner_id()` method that returns
-    the ObjectId of the resource owner.
+    A view deve implementar um método `get_owner_id()` que retorna
+    o ObjectId do dono do recurso.
     """
 
     message = 'Você não tem permissão para acessar este recurso.'
@@ -54,7 +56,7 @@ class IsResourceOwner(BasePermission):
             return False
 
         if not hasattr(view, 'get_owner_id'):
-            return True  # If view doesn't define ownership, allow
+            return True  # Se a view não define propriedade, permitir
 
         owner_id = view.get_owner_id()
         if owner_id is None:

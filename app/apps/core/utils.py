@@ -10,7 +10,7 @@ from datetime import datetime
 from slugify import slugify as _slugify
 
 
-def generate_order_number() -> str:
+def gerar_numero_pedido() -> str:
     """
     Generate a unique order number in format: ORD-YYYYMMDD-XXXX
 
