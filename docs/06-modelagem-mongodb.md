@@ -7,11 +7,12 @@ Este documento especifica o design da base de dados não-relacional do Cardápio
 ## Sumário
 
 - [6.1 Estratégia Estrutural](#61-estratégia-estrutural)
-- [6.2 Coleção de Identidades: `users`](#62-coleção-de-identidades-users)
-- [6.3 Coleção de Tenants: `restaurants`](#63-coleção-de-tenants-restaurants)
-- [6.4 Coleção Transacional: `orders`](#64-coleção-transacional-orders)
-- [6.5 Mapa de Entidade-Relacionamento (ERD)](#65-mapa-de-entidade-relacionamento-erd)
-- [6.6 Validação de Schema Nativa](#66-validação-de-schema-nativa)
+- [6.2 Coleção de Identidades: `usuarios`](#62-coleção-de-identidades-usuarios)
+- [6.3 Coleção de Tenants: `restaurantes`](#63-coleção-de-tenants-restaurantes)
+- [6.4 Coleção Transacional: `pedidos`](#64-coleção-transacional-pedidos)
+- [6.5 Coleção de Avaliações: `avaliacoes`](#65-coleção-de-avaliações-avaliacoes)
+- [6.6 Mapa de Entidade-Relacionamento (ERD)](#66-mapa-de-entidade-relacionamento-erd)
+- [6.7 Validação de Schema Nativa](#67-validação-de-schema-nativa)
 
 ---
 
@@ -23,242 +24,280 @@ A modelagem de dados foi arquitetada combinando os padrões estritos de bancos N
 
 ---
 
-## 6.2 Coleção de Identidades: `users`
+## 6.2 Coleção de Identidades: `usuarios`
 
-A coleção de *users* age como a matriz global de acesso, agrupando clientes finais e gestores na mesma estrutura lógica mediante isolamento por flag de escopo (`role`).
+A coleção de *usuarios* age como a matriz global de acesso, agrupando clientes finais e gestores na mesma estrutura lógica mediante isolamento por flag de escopo (`papel`).
 
 ```json
 {
   "_id": "ObjectId()",
   "email": "string (Indexado, Unique)",
-  "password_hash": "string | null",
-  "name": "string",
-  "phone": "string | null",
-  "role": "string (enum: 'customer', 'owner')",
+  "senha_hash": "string | null",
+  "nome": "string",
+  "telefone": "string | null",
+  "papel": "string (enum: 'cliente', 'dono')",
   "avatar_url": "string | null (URL Absoluta AWS S3)",
   "google_id": "string | null (Indexado Sparse, Unique)",
-  "addresses": [
+  "enderecos": [
     {
-      "label": "string (ex: Residência)",
-      "street": "string",
-      "number": "string",
-      "complement": "string | null",
-      "neighborhood": "string",
-      "city": "string",
-      "state": "string",
-      "zip_code": "string",
-      "is_default": "boolean"
+      "rotulo": "string (ex: Residência)",
+      "rua": "string",
+      "numero": "string",
+      "complemento": "string | null",
+      "bairro": "string",
+      "cidade": "string",
+      "estado": "string",
+      "cep": "string",
+      "padrao": "boolean"
     }
   ],
-  "is_active": "boolean",
-  "created_at": "ISODate()",
-  "updated_at": "ISODate()"
+  "esta_ativo": "boolean",
+  "criado_em": "ISODate()",
+  "atualizado_em": "ISODate()"
 }
 ```
 
-### Índices de Performance (`users`)
+### Índices de Performance (`usuarios`)
 ```javascript
-db.users.createIndex({ "email": 1 }, { unique: true })
-db.users.createIndex({ "google_id": 1 }, { unique: true, sparse: true })
-db.users.createIndex({ "role": 1 })
+db.usuarios.createIndex({ "email": 1 }, { unique: true })
+db.usuarios.createIndex({ "google_id": 1 }, { unique: true, sparse: true })
+db.usuarios.createIndex({ "papel": 1 })
 ```
 
 ---
 
-## 6.3 Coleção de Tenants: `restaurants`
+## 6.3 Coleção de Tenants: `restaurantes`
 
-A coleção `restaurants` é a estrutura de maior densidade no sistema. Ao englobar a grade de *business_hours* e os *products*, ela permite a renderização completa de uma página de restaurante sem a necessidade de gerar sub-consultas (*JOIN/Lookup*).
+A coleção `restaurantes` é a estrutura de maior densidade no sistema. Ao englobar a grade de *horarios_funcionamento* e os *produtos*, ela permite a renderização completa de uma página de restaurante sem a necessidade de gerar sub-consultas (*JOIN/Lookup*).
 
 ```json
 {
   "_id": "ObjectId()",
-  "owner_id": "ObjectId() (Ref: users)",
-  "name": "string",
+  "dono_id": "ObjectId() (Ref: usuarios)",
+  "nome": "string",
   "slug": "string (Indexado, Unique)",
-  "description": "string",
-  "cover_image_url": "string",
+  "descricao": "string",
+  "imagem_capa_url": "string",
   "logo_url": "string | null",
-  "contact": {
-    "phone": "string",
+  "contato": {
+    "telefone": "string",
     "email": "string | null",
     "whatsapp": "string | null"
   },
-  "address": {
-    "street": "string",
-    "number": "string",
-    "neighborhood": "string",
-    "city": "string",
-    "state": "string",
-    "zip_code": "string",
-    "coordinates": {
+  "endereco": {
+    "rua": "string",
+    "numero": "string",
+    "bairro": "string",
+    "cidade": "string",
+    "estado": "string",
+    "cep": "string",
+    "coordenadas": {
       "lat": "number",
       "lng": "number"
     }
   },
-  "business_hours": [
+  "horarios_funcionamento": [
     {
-      "day": "integer (0=Domingo, 6=Sábado)",
-      "open": "string (Formato HH:MM)",
-      "close": "string (Formato HH:MM)",
-      "is_closed": "boolean"
+      "dia": "integer (0=Domingo, 6=Sábado)",
+      "abertura": "string (Formato HH:MM)",
+      "fechamento": "string (Formato HH:MM)",
+      "fechado": "boolean"
     }
   ],
-  "categories": ["string"],
-  "products": [
+  "categorias": ["string"],
+  "produtos": [
     {
       "_id": "ObjectId()",
-      "name": "string",
-      "description": "string",
-      "price": "number (Decimal128)",
-      "category": "string (enum)",
-      "image_url": "string",
-      "is_available": "boolean",
-      "sort_order": "integer",
-      "created_at": "ISODate()",
-      "updated_at": "ISODate()"
+      "nome": "string",
+      "descricao": "string",
+      "preco": "number (Decimal128)",
+      "categoria": "string (enum)",
+      "imagem_url": "string",
+      "esta_disponivel": "boolean",
+      "ordem": "integer",
+      "criado_em": "ISODate()",
+      "atualizado_em": "ISODate()"
     }
   ],
-  "status": "string (enum: 'active', 'inactive', 'suspended')",
-  "rating": {
-    "average": "number (escala 0-5)",
-    "count": "integer"
+  "status": "string (enum: 'ativo', 'inativo', 'suspenso')",
+  "avaliacao": {
+    "media": "number (escala 0-5)",
+    "contagem": "integer"
   },
-  "created_at": "ISODate()",
-  "updated_at": "ISODate()"
+  "criado_em": "ISODate()",
+  "atualizado_em": "ISODate()"
 }
 ```
 
-### Índices de Performance (`restaurants`)
+### Índices de Performance (`restaurantes`)
 ```javascript
-db.restaurants.createIndex({ "slug": 1 }, { unique: true })
-db.restaurants.createIndex({ "owner_id": 1 })
-db.restaurants.createIndex({ "status": 1 })
-db.restaurants.createIndex({ "name": "text", "description": "text" })
-db.restaurants.createIndex({ "address.coordinates": "2dsphere" })
-db.restaurants.createIndex({ "products.category": 1 })
+db.restaurantes.createIndex({ "slug": 1 }, { unique: true })
+db.restaurantes.createIndex({ "dono_id": 1 })
+db.restaurantes.createIndex({ "status": 1 })
+db.restaurantes.createIndex({ "nome": "text", "descricao": "text" })
+db.restaurantes.createIndex({ "endereco.coordenadas": "2dsphere" })
+db.restaurantes.createIndex({ "produtos.categoria": 1 })
 ```
 
 ---
 
-## 6.4 Coleção Transacional: `orders`
+## 6.4 Coleção Transacional: `pedidos`
 
 Documentos de ordem de serviço são estruturas imutáveis que operam como registros contábeis, armazenando em suas matrizes o valor monetário real acordado no ato do checkout.
 
 ```json
 {
   "_id": "ObjectId()",
-  "order_number": "string (Unique, Prefixo: ORD-2026-X)",
-  "customer_id": "ObjectId() (Ref: users)",
-  "restaurant_id": "ObjectId() (Ref: restaurants)",
-  "items": [
+  "numero_pedido": "string (Unique, Prefixo: ORD-2026-X)",
+  "cliente_id": "ObjectId() (Ref: usuarios)",
+  "restaurante_id": "ObjectId() (Ref: restaurantes)",
+  "itens": [
     {
-      "product_id": "ObjectId()",
-      "name": "string (Snapshot Congelado)",
-      "price": "number (Decimal128)",
-      "quantity": "integer",
+      "produto_id": "ObjectId()",
+      "nome": "string (Snapshot Congelado)",
+      "preco": "number (Decimal128)",
+      "quantidade": "integer",
       "subtotal": "number (Decimal128)",
-      "image_url": "string"
+      "imagem_url": "string"
     }
   ],
   "total": "number (Decimal128)",
-  "status": "string (enum: 'pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled')",
-  "status_history": [
+  "status": "string (enum: 'pendente', 'confirmado', 'preparando', 'pronto', 'entregue', 'cancelado')",
+  "historico_status": [
     {
       "status": "string",
-      "changed_at": "ISODate()",
-      "changed_by": "ObjectId() (Ref: users)"
+      "alterado_em": "ISODate()",
+      "alterado_por": "ObjectId() (Ref: usuarios)"
     }
   ],
-  "delivery_method": "string (enum: 'delivery', 'pickup')",
-  "delivery_address": {
-    "street": "string",
-    "number": "string",
-    "neighborhood": "string",
-    "city": "string",
-    "state": "string",
-    "zip_code": "string"
+  "metodo_entrega": "string (enum: 'entrega', 'retirada')",
+  "endereco_entrega": {
+    "rua": "string",
+    "numero": "string",
+    "bairro": "string",
+    "cidade": "string",
+    "estado": "string",
+    "cep": "string"
   },
-  "notes": "string | null",
-  "created_at": "ISODate()",
-  "updated_at": "ISODate()"
+  "observacoes": "string | null",
+  "criado_em": "ISODate()",
+  "atualizado_em": "ISODate()"
 }
 ```
 
-### Índices de Performance (`orders`)
+### Índices de Performance (`pedidos`)
 ```javascript
-db.orders.createIndex({ "order_number": 1 }, { unique: true })
-db.orders.createIndex({ "customer_id": 1, "created_at": -1 })
-db.orders.createIndex({ "restaurant_id": 1, "status": 1, "created_at": -1 })
+db.pedidos.createIndex({ "numero_pedido": 1 }, { unique: true })
+db.pedidos.createIndex({ "cliente_id": 1, "criado_em": -1 })
+db.pedidos.createIndex({ "restaurante_id": 1, "status": 1, "criado_em": -1 })
 ```
 
 ---
 
-## 6.5 Mapa de Entidade-Relacionamento (ERD)
+## 6.5 Coleção de Avaliações: `avaliacoes`
+
+A coleção de *avaliacoes* permite o registro do feedback dos clientes após a conclusão de um pedido. Esta coleção armazena os dados em português, referenciando o restaurante e opcionalmente o pedido.
+
+```json
+{
+  "_id": "ObjectId()",
+  "cliente_id": "ObjectId() (Ref: usuarios)",
+  "nome_cliente": "string",
+  "restaurante_id": "ObjectId() (Ref: restaurantes)",
+  "pedido_id": "ObjectId() | null (Ref: pedidos)",
+  "nota": "integer (1-5)",
+  "comentario": "string | null",
+  "criado_em": "ISODate()"
+}
+```
+
+### Índices de Performance (`avaliacoes`)
+```javascript
+db.avaliacoes.createIndex({ "restaurante_id": 1, "criado_em": -1 })
+db.avaliacoes.createIndex({ "cliente_id": 1 })
+db.avaliacoes.createIndex({ "pedido_id": 1 }, { sparse: true })
+```
+
+---
+
+## 6.6 Mapa de Entidade-Relacionamento (ERD)
 
 A abstração abaixo mapeia como o banco NoSQL implementa o conceito de ligação através das abordagens híbridas de Foreign Keys lógicas e Embedded Objects.
 
 ```mermaid
 erDiagram
-    users {
+    usuarios {
         ObjectId _id PK
         string email
-        string name
-        string role
+        string nome
+        string papel
     }
 
-    restaurants {
+    restaurantes {
         ObjectId _id PK
-        ObjectId owner_id FK
-        string name
+        ObjectId dono_id FK
+        string nome
         string slug
-        array products "Embedded Pattern"
+        array produtos "Embedded Pattern"
     }
 
-    products {
+    produtos {
         ObjectId _id PK
-        string name
-        decimal price
-        string category
+        string nome
+        decimal preco
+        string categoria
     }
 
-    orders {
+    pedidos {
         ObjectId _id PK
-        ObjectId customer_id FK
-        ObjectId restaurant_id FK
+        ObjectId cliente_id FK
+        ObjectId restaurante_id FK
         decimal total
         string status
-        array items "Snapshot Estrito"
+        array itens "Snapshot Estrito"
     }
 
-    items {
-        ObjectId product_id FK
-        string name
-        decimal price
-        int quantity
+    itens {
+        ObjectId produto_id FK
+        string nome
+        decimal preco
+        int quantidade
     }
 
-    users ||--o{ restaurants : "Detém a Propriedade"
-    users ||--o{ orders : "Inicia uma Transação"
-    restaurants ||--o{ products : "Encapsula o Objeto"
-    restaurants ||--o{ orders : "Recepciona e Processa"
-    orders ||--o{ items : "Possui Fragmentos Financeiros"
+    avaliacoes {
+        ObjectId _id PK
+        ObjectId cliente_id FK
+        ObjectId restaurante_id FK
+        ObjectId pedido_id FK
+        int nota
+        string comentario
+    }
+
+    usuarios ||--o{ restaurantes : "Detém a Propriedade"
+    usuarios ||--o{ pedidos : "Inicia uma Transação"
+    usuarios ||--o{ avaliacoes : "Realiza"
+    restaurantes ||--o{ produtos : "Encapsula o Objeto"
+    restaurantes ||--o{ pedidos : "Recepciona e Processa"
+    restaurantes ||--o{ avaliacoes : "Recebe"
+    pedidos ||--o{ itens : "Possui Fragmentos Financeiros"
+    pedidos ||--o| avaliacoes : "Pode ser Avaliado"
 ```
 
 ---
 
-## 6.6 Validação de Schema Nativa
+## 6.7 Validação de Schema Nativa
 
 Apesar do design Schema-less do MongoDB, proteções contra a gravação de dados falhos são aplicadas no *Driver* através do *JSON Schema Validator* atrelado às coleções core.
 
 ```javascript
-db.createCollection("orders", {
+db.createCollection("pedidos", {
   validator: {
     $jsonSchema: {
       bsonType: "object",
-      required: ["order_number", "customer_id", "restaurant_id", "items", "total", "status"],
+      required: ["numero_pedido", "cliente_id", "restaurante_id", "itens", "total", "status"],
       properties: {
         status: { 
-          enum: ["pending", "confirmed", "preparing", "ready", "delivered", "cancelled"],
+          enum: ["pendente", "confirmado", "preparando", "pronto", "entregue", "cancelado"],
           description: "A violação do fluxo transacional reverte a inserção."
         },
         total: { 
@@ -266,12 +305,12 @@ db.createCollection("orders", {
           minimum: 0,
           description: "A totalização não pode sofrer inconsistência negativa."
         },
-        items: {
+        itens: {
           bsonType: "array",
           minItems: 1,
           items: {
             bsonType: "object",
-            required: ["product_id", "name", "price", "quantity", "subtotal"]
+            required: ["produto_id", "nome", "preco", "quantidade", "subtotal"]
           }
         }
       }
