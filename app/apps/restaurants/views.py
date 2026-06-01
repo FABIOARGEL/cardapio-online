@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+import json
 
 from apps.core.authentication import JWTAuthentication
 from apps.core.permissions import IsAuthenticated, IsOwner
@@ -42,7 +43,19 @@ class RestaurantCreateView(APIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def post(self, request):
-        serializer = CreateRestaurantSerializer(data=request.data)
+        if hasattr(request.data, 'dict'):
+            data = request.data.dict()
+        else:
+            data = request.data.copy()
+
+        for field in ['contato', 'endereco', 'horarios_funcionamento']:
+            if field in data and isinstance(data[field], str):
+                try:
+                    data[field] = json.loads(data[field])
+                except json.JSONDecodeError:
+                    pass
+
+        serializer = CreateRestaurantSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         service = RestaurantService()
         result = service.create_restaurant(
@@ -73,7 +86,19 @@ class RestaurantDetailView(APIView):
             return Response({'error': 'Sem permissão.'}, status=status.HTTP_403_FORBIDDEN)
         user = user_auth[0]
 
-        serializer = UpdateRestaurantSerializer(data=request.data)
+        if hasattr(request.data, 'dict'):
+            data = request.data.dict()
+        else:
+            data = request.data.copy()
+
+        for field in ['contato', 'endereco', 'horarios_funcionamento']:
+            if field in data and isinstance(data[field], str):
+                try:
+                    data[field] = json.loads(data[field])
+                except json.JSONDecodeError:
+                    pass
+
+        serializer = UpdateRestaurantSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         service = RestaurantService()
         result = service.update_restaurant(
