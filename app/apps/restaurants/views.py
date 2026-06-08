@@ -13,15 +13,15 @@ from apps.core.authentication import JWTAuthentication
 from apps.core.permissions import IsAuthenticated, IsOwner
 from apps.restaurants.serializers import (
     CreateCouponSerializer,
-    CreateProductSerializer,
+    CreatePratoSerializer,
     CreateRestaurantSerializer,
     UpdateCouponSerializer,
-    UpdateProductSerializer,
+    UpdatePratoSerializer,
     UpdateRestaurantSerializer,
 )
 from apps.restaurants.services import (
     CouponService,
-    ProductService,
+    PratoService,
     RestaurantService,
     StatsService,
 )
@@ -167,13 +167,13 @@ class OwnerRestaurantDetailView(APIView):
         return Response(result)
 
 
-class ProductListView(APIView):
+class PratoListView(APIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request, restaurant_id):
-        service = ProductService()
+        service = PratoService()
         category = request.query_params.get('category')
-        result = service.list_products(restaurant_id, category=category)
+        result = service.list_pratos(restaurant_id, category=category)
         return Response(result)
 
     def post(self, request, restaurant_id):
@@ -183,14 +183,14 @@ class ProductListView(APIView):
             return Response({'error': 'Sem permissão.'}, status=status.HTTP_403_FORBIDDEN)
         user = user_auth[0]
 
-        serializer = CreateProductSerializer(data=request.data)
+        serializer = CreatePratoSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        service = ProductService()
+        service = PratoService()
         images = request.FILES.getlist('images')
         if not images and request.FILES.get('image'):
             images = [request.FILES.get('image')]
 
-        result = service.add_product(
+        result = service.add_prato(
             restaurant_id=restaurant_id,
             owner_id=str(user.id),
             data=serializer.validated_data,
@@ -199,53 +199,53 @@ class ProductListView(APIView):
         return Response(result, status=status.HTTP_201_CREATED)
 
 
-class AllProductsView(APIView):
+class AllPratosView(APIView):
     def get(self, request):
-        service = ProductService()
+        service = PratoService()
         page = int(request.query_params.get('page', 1))
         search = request.query_params.get('search')
         category = request.query_params.get('category')
-        result = service.list_all_products(page=page, search=search, category=category)
+        result = service.list_all_pratos(page=page, search=search, category=category)
         return Response(result)
 
 
-class ProductDetailView(APIView):
+class PratoDetailView(APIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
-    def put(self, request, restaurant_id, product_id):
+    def put(self, request, restaurant_id, prato_id):
         auth = JWTAuthentication()
         user_auth = auth.authenticate(request)
         if not user_auth or user_auth[0].papel != 'dono':
             return Response({'error': 'Sem permissão.'}, status=status.HTTP_403_FORBIDDEN)
         user = user_auth[0]
 
-        serializer = UpdateProductSerializer(data=request.data)
+        serializer = UpdatePratoSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        service = ProductService()
+        service = PratoService()
         images = request.FILES.getlist('images')
         if not images and request.FILES.get('image'):
             images = [request.FILES.get('image')]
 
-        result = service.update_product(
+        result = service.update_prato(
             restaurant_id=restaurant_id,
-            product_id=product_id,
+            prato_id=prato_id,
             owner_id=str(user.id),
             data=serializer.validated_data,
             images=images,
         )
         return Response(result)
 
-    def delete(self, request, restaurant_id, product_id):
+    def delete(self, request, restaurant_id, prato_id):
         auth = JWTAuthentication()
         user_auth = auth.authenticate(request)
         if not user_auth or user_auth[0].papel != 'dono':
             return Response({'error': 'Sem permissão.'}, status=status.HTTP_403_FORBIDDEN)
         user = user_auth[0]
 
-        service = ProductService()
-        service.remove_product(
+        service = PratoService()
+        service.remove_prato(
             restaurant_id=restaurant_id,
-            product_id=product_id,
+            prato_id=prato_id,
             owner_id=str(user.id),
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

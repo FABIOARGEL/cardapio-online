@@ -51,11 +51,11 @@ class RepositorioRestaurante(BaseRepository[Restaurante]):
         if search:
             filters['__raw__'] = {'$text': {'$search': search}}
         if category:
-            filters['produtos__categoria'] = category
+            filters['pratos__categoria'] = category
 
         return self.paginate(page=page, page_size=page_size, **filters)
 
-    def listar_todos_produtos_agregacao(
+    def listar_todos_pratos_agregacao(
         self,
         page: int = 1,
         page_size: int = 24,
@@ -63,44 +63,44 @@ class RepositorioRestaurante(BaseRepository[Restaurante]):
         category: str | None = None,
     ) -> PaginatedResult:
         """
-        Lista todos os produtos disponíveis de restaurantes ativos usando
+        Lista todos os pratos disponíveis de restaurantes ativos usando
         MongoDB aggregation pipeline.
         """
         # Constroi o pipeline de agregação
         pipeline: list[dict] = [
             {'$match': {'status': StatusRestaurante.ATIVO}},
-            {'$unwind': '$produtos'},
-            {'$match': {'produtos.esta_disponivel': True}},
+            {'$unwind': '$pratos'},
+            {'$match': {'pratos.esta_disponivel': True}},
         ]
 
         if category and category != 'all':
-            pipeline.append({'$match': {'produtos.categoria': category}})
+            pipeline.append({'$match': {'pratos.categoria': category}})
 
         if search:
             pipeline.append({'$match': {
-                'produtos.nome': {'$regex': search, '$options': 'i'},
+                'pratos.nome': {'$regex': search, '$options': 'i'},
             }})
 
-        # Conta total de produtos correspondentes
+        # Conta total de pratos correspondentes
         count_pipeline = pipeline + [{'$count': 'total'}]
         count_result = self.aggregate(count_pipeline)
         total = count_result[0]['total'] if count_result else 0
 
         # Ordena, pagina e projeta
         pipeline.extend([
-            {'$sort': {'produtos.criado_em': -1}},
+            {'$sort': {'pratos.criado_em': -1}},
             {'$skip': (page - 1) * page_size},
             {'$limit': page_size},
             {'$project': {
                 '_id': 0,
-                'id': {'$toString': '$produtos._id'},
-                'nome': '$produtos.nome',
-                'descricao': {'$ifNull': ['$produtos.descricao', '']},
-                'preco': {'$toDouble': '$produtos.preco'},
-                'categoria': '$produtos.categoria',
-                'imagem_url': {'$ifNull': ['$produtos.imagem_url', '']},
-                'imagens': {'$ifNull': ['$produtos.imagens', []]},
-                'esta_disponivel': '$produtos.esta_disponivel',
+                'id': {'$toString': '$pratos._id'},
+                'nome': '$pratos.nome',
+                'descricao': {'$ifNull': ['$pratos.descricao', '']},
+                'preco': {'$toDouble': '$pratos.preco'},
+                'categoria': '$pratos.categoria',
+                'imagem_url': {'$ifNull': ['$pratos.imagem_url', '']},
+                'imagens': {'$ifNull': ['$pratos.imagens', []]},
+                'esta_disponivel': '$pratos.esta_disponivel',
                 'restaurante_id': {'$toString': '$_id'},
                 'restaurante_nome': '$nome',
                 'restaurante_slug': '$slug',

@@ -32,7 +32,7 @@ classDiagram
         +Cadastrar-se()
         +Fazer Login()
         +Gerenciar Restaurante()
-        +Gerenciar Produtos()
+        +Gerenciar Pratos()
         +Gerenciar Pedidos()
     }
 
@@ -46,7 +46,7 @@ classDiagram
         +UC06 Finalizar Pedido()
         +UC07 Acompanhar Pedido()
         +UC08 Gerenciar Restaurante()
-        +UC09 Gerenciar Produtos()
+        +UC09 Gerenciar Pratos()
         +UC10 Gerenciar Pedidos()
     }
 
@@ -124,12 +124,12 @@ classDiagram
 | --- | --- |
 | **Ator Primário** | Cliente |
 | **Pré-condição** | Seleção de um restaurante válido listado. |
-| **Pós-condição** | Renderização completa dos produtos, organizados por taxonomia. |
+| **Pós-condição** | Renderização completa dos pratos, organizados por taxonomia. |
 
 **Fluxo Principal:**
 1. O cliente aciona o hiperlink (slug ou ID) de um restaurante específico.
-2. A aplicação resolve os metadados do restaurante juntamente com seu array de produtos.
-3. Os produtos são hierarquizados dinamicamente através de abas de categorias.
+2. A aplicação resolve os metadados do restaurante juntamente com seu array de pratos.
+3. Os pratos são hierarquizados dinamicamente através de abas de categorias.
 4. O usuário interage com o modal de detalhes para visualizar descrições complexas e precificação de cada item.
 
 ---
@@ -139,7 +139,7 @@ classDiagram
 | Propriedade | Descrição |
 | --- | --- |
 | **Ator Primário** | Cliente (Sessão Ativa / Inativa) |
-| **Pré-condição** | Produto em visualização na página de cardápio. |
+| **Pré-condição** | Prato em visualização na página de cardápio. |
 | **Pós-condição** | Objeto inserido na memória local e reconciliado com o backend. |
 
 **Fluxo Principal:**
@@ -160,7 +160,7 @@ classDiagram
 | Propriedade | Descrição |
 | --- | --- |
 | **Ator Primário** | Cliente (Sessão Ativa Exigida) |
-| **Pré-condição** | Entidade de Carrinho contendo, no mínimo, 1 unidade de produto. |
+| **Pré-condição** | Entidade de Carrinho contendo, no mínimo, 1 unidade de prato. |
 | **Pós-condição** | Registro transacional do Pedido persistido e propagado via WebSocket. |
 
 **Fluxo Principal:**
@@ -205,7 +205,7 @@ classDiagram
 
 ---
 
-### UC09 — Gestão do Catálogo de Produtos
+### UC09 — Gestão do Catálogo de Pratos
 
 | Propriedade | Descrição |
 | --- | --- |
@@ -214,7 +214,7 @@ classDiagram
 | **Pós-condição** | Portfólio atualizado refletindo em todas as interfaces públicas de maneira eventual. |
 
 **Fluxo Principal:**
-1. O gestor interage com o painel de produtos do tenant.
+1. O gestor interage com o painel de pratos do tenant.
 2. Ações de Criação, Leitura, Atualização ou Exclusão (Soft Delete / Disponibilidade) são aplicadas a itens da coleção.
 3. O serviço de retaguarda sanitiza os descritivos, resolve o armazenamento das imagens individuais e reconcilia a base.
 

@@ -16,12 +16,12 @@ const Cart = {
     
     add(product, restaurantId, restaurantName) {
         let cart = this.get();
-        const existing = cart.items.find(i => i.product_id === product.id);
+        const existing = cart.items.find(i => i.prato_id === product.id);
         if (existing) { 
             existing.quantity = Math.min(99, existing.quantity + 1); 
         } else { 
             cart.items.push({ 
-                product_id: product.id, 
+                prato_id: product.id, 
                 nome: product.nome, 
                 preco: product.preco, 
                 image_url: product.image_url || product.imagem_url, 
@@ -36,14 +36,14 @@ const Cart = {
     
     updateQuantity(productId, qty) {
         const cart = this.get();
-        const item = cart.items.find(i => i.product_id === productId);
+        const item = cart.items.find(i => i.prato_id === productId);
         if (item) { item.quantity = Math.max(1, Math.min(99, qty)); }
         this.save(cart);
     },
     
     remove(productId) {
         const cart = this.get();
-        cart.items = cart.items.filter(i => i.product_id !== productId);
+        cart.items = cart.items.filter(i => i.prato_id !== productId);
         this.save(cart);
     },
     

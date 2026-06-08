@@ -127,7 +127,7 @@
 
     function reorder(restaurantId, items) {
         Cart.clear();
-        items.forEach(i => { Cart.add({ id: i.produto_id, nome: i.nome, preco: i.preco, image_url: i.imagem_url }, restaurantId, "Restaurante"); if (i.quantidade > 1) { Cart.updateQuantity(i.produto_id, i.quantidade); } });
+        items.forEach(i => { Cart.add({ id: i.prato_id, nome: i.nome, preco: i.preco, image_url: i.imagem_url }, restaurantId, "Restaurante"); if (i.quantidade > 1) { Cart.updateQuantity(i.prato_id, i.quantidade); } });
         window.location.href = '/carrinho/';
     }
 

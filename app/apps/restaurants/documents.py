@@ -1,10 +1,10 @@
 """
-Documentos MongoEngine para as coleções de Restaurante e Produto.
+Documentos MongoEngine para as coleções de Restaurante e Prato.
 
 Schema conforme doc 06-modelagem-mongodb.md:
 - Restaurante: dono_id, nome, slug, descricao, imagem_capa_url, contato, endereco,
-               horarios_funcionamento, produtos (embarcado), cupons (embarcado), status, avaliacao
-- Produto: embarcado dentro de Restaurante — nome, descricao, preco, categoria,
+               horarios_funcionamento, pratos (embarcado), cupons (embarcado), status, avaliacao
+- Prato: embarcado dentro de Restaurante — nome, descricao, preco, categoria,
            imagem_url, esta_disponivel, ordem, estoque
 - Cupom: embarcado dentro de Restaurante — codigo, tipo_desconto, valor_desconto,
          pedido_minimo, max_usos, contagem_usos, valido_de, valido_ate, esta_ativo
@@ -89,9 +89,9 @@ class Avaliacao(me.EmbeddedDocument):
     meta = {'strict': False}
 
 
-class Produto(me.EmbeddedDocument):
+class Prato(me.EmbeddedDocument):
     """
-    Produto embarcado dentro de um documento Restaurante.
+    Prato embarcado dentro de um documento Restaurante.
 
     Categorias: entrada, principal, sobremesa, bebida, combo
     """
@@ -176,9 +176,9 @@ class Restaurante(me.Document):
     """
     Documento de restaurante armazenado na coleção MongoDB 'restaurantes'.
 
-    Produtos e cupons são embarcados dentro do documento do restaurante para
+    Pratos e cupons são embarcados dentro do documento do restaurante para
     performance ótima de leitura (sempre acessados juntos).
-    Limite: ~200 produtos por restaurante.
+    Limite: ~200 pratos por restaurante.
     """
     OPCOES_STATUS = ('ativo', 'inativo', 'suspenso')
 
@@ -192,7 +192,7 @@ class Restaurante(me.Document):
     endereco = me.EmbeddedDocumentField(EnderecoRestaurante)
     horarios_funcionamento = me.EmbeddedDocumentListField(HorarioFuncionamento, default=list)
     categorias = me.ListField(me.StringField(), default=list)
-    produtos = me.EmbeddedDocumentListField(Produto, default=list)
+    pratos = me.EmbeddedDocumentListField(Prato, default=list)
     cupons = me.EmbeddedDocumentListField(Cupom, default=list)
     taxa_entrega = me.DecimalField(default=0, precision=2)
     tempo_entrega_estimado = me.StringField(max_length=50, default='40-50 min')
@@ -211,7 +211,7 @@ class Restaurante(me.Document):
                 'fields': ['$nome', '$descricao'],
                 'default_language': 'portuguese',
             },
-            {'fields': ['produtos.categoria']},
+            {'fields': ['pratos.categoria']},
         ],
         'ordering': ['-criado_em'],
         'strict': False,
@@ -286,10 +286,10 @@ class Restaurante(me.Document):
         }
 
         if include_products:
-            data['produtos'] = [p.to_dict() for p in self.produtos if p.esta_disponivel]
+            data['pratos'] = [p.to_dict() for p in self.pratos if p.esta_disponivel]
 
         if include_all_products:
-            data['produtos'] = [p.to_dict() for p in self.produtos]
+            data['pratos'] = [p.to_dict() for p in self.pratos]
 
         if include_coupons:
             data['cupons'] = [c.to_dict() for c in self.cupons]

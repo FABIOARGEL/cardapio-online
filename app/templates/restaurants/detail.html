@@ -84,7 +84,7 @@
             <div class="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
                 <i data-lucide="package-x" class="w-8 h-8 text-red-300"></i>
             </div>
-            <h3 class="text-lg font-semibold text-gray-800 mb-2">Nenhum produto nesta categoria</h3>
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">Nenhum prato nesta categoria</h3>
             <p class="text-gray-500 text-sm">Tente selecionar outra categoria.</p>
         </div>
     </div>
@@ -229,14 +229,14 @@
 
         const categories = { entrada: '🥗 Entradas', principal: '🍽️ Pratos', sobremesa: '🍰 Sobremesas', bebida: '🥤 Bebidas', combo: '📦 Combos' };
         const tabs = document.getElementById('category-tabs');
-        const availableCats = [...new Set((r.produtos || []).map(p => p.categoria))];
-        let tabsHtml = `<button onclick="filterProducts(null)" class="cat-tab whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium bg-red-500 text-white shadow-sm transition-all" data-cat="all">Todos (${(r.produtos || []).length})</button>`;
+        const availableCats = [...new Set((r.pratos || []).map(p => p.categoria))];
+        let tabsHtml = `<button onclick="filterProducts(null)" class="cat-tab whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium bg-red-500 text-white shadow-sm transition-all" data-cat="all">Todos (${(r.pratos || []).length})</button>`;
         availableCats.forEach(cat => {
-            const count = (r.produtos || []).filter(p => p.categoria === cat).length;
+            const count = (r.pratos || []).filter(p => p.categoria === cat).length;
             tabsHtml += `<button onclick="filterProducts('${cat}')" class="cat-tab whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium bg-white text-gray-600 border border-gray-200 hover:border-red-300 hover:text-red-500 transition-all" data-cat="${cat}">${categories[cat] || cat} (${count})</button>`;
         });
         tabs.innerHTML = tabsHtml;
-        renderProducts(r.produtos || []);
+        renderProducts(r.pratos || []);
     }
 
     function filterProducts(category) {
@@ -246,7 +246,7 @@
             if (isActive) { b.classList.add('bg-red-500', 'text-white', 'shadow-sm'); b.classList.remove('bg-white', 'text-gray-600', 'border', 'border-gray-200'); }
             else { b.classList.remove('bg-red-500', 'text-white', 'shadow-sm'); b.classList.add('bg-white', 'text-gray-600', 'border', 'border-gray-200'); }
         });
-        const products = restaurantData.produtos || [];
+        const products = restaurantData.pratos || [];
         const filtered = category ? products.filter(p => p.categoria === category) : products;
         renderProducts(filtered);
     }
@@ -257,7 +257,7 @@
         const counter = document.getElementById('products-count');
         if (products.length === 0) { grid.innerHTML = ''; empty.classList.remove('hidden'); counter.classList.add('hidden'); lucide.createIcons(); return; }
         empty.classList.add('hidden'); counter.classList.remove('hidden');
-        document.getElementById('products-count-text').textContent = `${products.length} produto(s)`;
+        document.getElementById('products-count-text').textContent = `${products.length} prato(s)`;
         grid.innerHTML = products.map(p => {
             const imgUrl = getImageUrl(p.imagem_url);
             const priceFormatted = formatMoney(p.preco || 0);
@@ -285,7 +285,7 @@
 
     // Modal Functions
     function openProductModal(p) {
-        if (p.esta_disponivel === false) { showToast('Este produto está esgotado', 'warning'); return; }
+        if (p.esta_disponivel === false) { showToast('Este prato está esgotado', 'warning'); return; }
         
         currentProduct = p;
         pmQuantity = 1;

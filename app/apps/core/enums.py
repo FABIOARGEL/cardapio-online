@@ -61,8 +61,8 @@ class MetodoPagamento(StrEnum):
     DINHEIRO = 'dinheiro'
 
 
-class CategoriaProduto(StrEnum):
-    """Tipos de categoria de produto."""
+class CategoriaPrato(StrEnum):
+    """Tipos de categoria de prato."""
     ENTRADA = 'entrada'
     PRINCIPAL = 'principal'
     SOBREMESA = 'sobremesa'
@@ -79,8 +79,8 @@ class TipoDesconto(StrEnum):
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Constantes
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-MAX_PRODUTOS_POR_RESTAURANTE = 200
-MAX_IMAGENS_POR_PRODUTO = 5
+MAX_PRATOS_POR_RESTAURANTE = 200
+MAX_IMAGENS_POR_PRATO = 5
 MAX_ENDERECOS_POR_USUARIO = 10
 TAMANHO_PAGINA_PADRAO = 12
 TAMANHO_PAGINA_MAXIMO = 100

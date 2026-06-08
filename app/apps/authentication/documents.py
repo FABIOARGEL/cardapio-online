@@ -39,7 +39,7 @@ class Usuario(me.Document):
 
     Suporta dois tipos de usuários:
     - cliente: usuário final que navega e faz pedidos
-    - dono: dono de restaurante que gerencia restaurantes e produtos
+    - dono: dono de restaurante que gerencia restaurantes e pratos
     """
     OPCOES_PAPEL = ('cliente', 'dono')
 

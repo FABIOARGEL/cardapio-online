@@ -275,7 +275,7 @@
             const addrObj = userAddresses[parseInt(selectedAddrInput.value)];
             deliveryAddress = { rua: addrObj.rua, numero: addrObj.numero, complemento: addrObj.complemento || '', bairro: addrObj.bairro, cidade: addrObj.cidade, estado: addrObj.estado, cep: addrObj.cep };
         }
-        const payload = { restaurante_id: checkoutRestaurantId, itens: checkoutItems.map(i => ({ produto_id: i.product_id, quantidade: i.quantity })), metodo_entrega: deliveryMethod, metodo_pagamento: paymentMethod, observacoes: document.getElementById('checkout-notes').value.trim(), codigo_cupom: appliedCoupon ? appliedCoupon.codigo : '' };
+        const payload = { restaurante_id: checkoutRestaurantId, itens: checkoutItems.map(i => ({ prato_id: i.product_id, quantidade: i.quantity })), metodo_entrega: deliveryMethod, metodo_pagamento: paymentMethod, observacoes: document.getElementById('checkout-notes').value.trim(), codigo_cupom: appliedCoupon ? appliedCoupon.codigo : '' };
         if (deliveryAddress) { payload.endereco_entrega = deliveryAddress; }
         btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin mx-auto"></i>'; btn.disabled = true; errorDiv.classList.add('hidden');
         try {

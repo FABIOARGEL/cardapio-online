@@ -1,6 +1,6 @@
 # 1. Documento de Visão
 
-Este documento descreve o escopo estratégico, o problema que a plataforma resolve e a visão de produto para o "Cardápio Online".
+Este documento descreve o escopo estratégico, o problema que a plataforma resolve e a visão de prato para o "Cardápio Online".
 
 ---
 
@@ -10,7 +10,7 @@ Este documento descreve o escopo estratégico, o problema que a plataforma resol
 - [1.2 Objetivo](#12-objetivo)
 - [1.3 Público-Alvo](#13-público-alvo)
 - [1.4 Diferenciais Competitivos](#14-diferenciais-competitivos)
-- [1.5 Visão do Produto](#15-visão-do-produto)
+- [1.5 Visão do Prato](#15-visão-do-prato)
 
 ---
 
@@ -18,7 +18,7 @@ Este documento descreve o escopo estratégico, o problema que a plataforma resol
 
 Muitos estabelecimentos gastronômicos de pequeno e médio porte enfrentam desafios técnicos e financeiros para digitalizar suas operações. Os principais gargalos identificados incluem:
 
-* **Cardápios Físicos Desatualizados:** A alteração de preços ou a inclusão de novos produtos exige a reimpressão constante de materiais, gerando custos adicionais e atrito na atualização do cardápio.
+* **Cardápios Físicos Desatualizados:** A alteração de preços ou a inclusão de novos pratos exige a reimpressão constante de materiais, gerando custos adicionais e atrito na atualização do cardápio.
 * **Ausência de Presença Digital Autônoma:** Uma parcela significativa de estabelecimentos não possui infraestrutura digital própria, dependendo exclusivamente de redes sociais ou ferramentas genéricas de mensagens.
 * **Dependência e Custos Elevados de Marketplaces:** A utilização de plataformas consolidadas de delivery impõe taxas abusivas (frequentemente entre 12% e 27% sobre as vendas), reduzindo drasticamente as margens de lucro dos restaurantes.
 * **Experiência do Consumidor Fragmentada:** Os clientes necessitam alternar entre múltiplas aplicações e canais para buscar estabelecimentos, visualizar opções e efetuar pedidos.
@@ -33,12 +33,12 @@ Desenvolver uma **plataforma SaaS (Software as a Service) centralizada, multi-te
 ### Para Gestores de Restaurantes (Tenants)
 * Cadastro, configuração e gestão autônoma de cardápios digitais interativos.
 * Recepção e processamento de pedidos online com sincronização em tempo real via WebSocket.
-* Atualização imediata de disponibilidade de produtos, imagens e precificação.
-* Acesso a painéis analíticos com métricas de vendas, faturamento e performance de produtos.
+* Atualização imediata de disponibilidade de pratos, imagens e precificação.
+* Acesso a painéis analíticos com métricas de vendas, faturamento e performance de pratos.
 
 ### Para Consumidores Finais
 * Navegação fluida em um ecossistema integrado que abriga múltiplos estabelecimentos.
-* Visualização detalhada de produtos com fotografias de alta qualidade, categorização semântica e descrições claras.
+* Visualização detalhada de pratos com fotografias de alta qualidade, categorização semântica e descrições claras.
 * Fluxo de checkout intuitivo, permitindo a construção de carrinhos de compras eficientes.
 * Rastreamento do status de preparação e entrega do pedido em tempo real.
 
@@ -80,7 +80,7 @@ O sistema se posiciona no mercado através de vantagens arquiteturais e de model
 
 ---
 
-## 1.5 Visão do Produto
+## 1.5 Visão do Prato
 
 > *"Consolidar-se como a infraestrutura digital primária para operações de food service locais, democratizando o acesso a tecnologias de vendas online de alta performance e devolvendo o controle da jornada e da rentabilidade aos proprietários."*
 

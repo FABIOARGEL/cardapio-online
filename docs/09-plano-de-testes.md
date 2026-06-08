@@ -40,12 +40,12 @@ As transações refletem a área de maior risco sistêmico da aplicação, impon
 
 ### TC02 — Anulação Tática por Quebra de Estoque
 * **Descrição:** Garantia de recusa da ordem caso a grade referencie itens com flag *available* nula na base do lojista no ato exato do checkout.
-* **Ação:** Tentativa fraudulenta/defasada de finalizar pedido englobando um identificador de produto indisponível.
+* **Ação:** Tentativa fraudulenta/defasada de finalizar pedido englobando um identificador de prato indisponível.
 * **Critério de Aceite:** O sistema deve abortar a conciliação emitindo HTTP 400 atrelado ao detalhamento claro da inconsistência de estoque.
 
 ### TC03 — Resiliência de Snapshot Financeiro (Congelamento de Preço)
 * **Descrição:** Garantia contra a alteração contábil fraudulenta sobre o preço estipulado de compra, caso o dono altere seu catálogo posteriomente à finalização do carrinho.
-* **Ação:** Concretização da Ordem (Custo do item R$ 20.00). Imediata retificação administrativa do produto na base do dono (Custo majorado R$ 25.00). Leitura da Ordem confirmada pelo cliente.
+* **Ação:** Concretização da Ordem (Custo do item R$ 20.00). Imediata retificação administrativa do prato na base do dono (Custo majorado R$ 25.00). Leitura da Ordem confirmada pelo cliente.
 * **Critério de Aceite:** A matriz histórica da Ordem reflete e mantém R$ 20.00 sem absorver alterações relativas de sub-arrays vinculados.
 
 ### TC04 — Impedimento de Transições de Estado Ilógicas

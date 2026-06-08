@@ -61,7 +61,7 @@
                         <span class="text-xs text-gray-400 font-medium">Ticket Médio</span>
                     </div>
                     <p class="text-xl font-bold text-gray-800" id="kpi-ticket">R$ 0,00</p>
-                    <p class="text-xs text-gray-400"><span id="kpi-products">0</span> produtos ativos</p>
+                    <p class="text-xs text-gray-400"><span id="kpi-pratos">0</span> pratos ativos</p>
                 </div>
             </div>
 
@@ -147,7 +147,7 @@
             document.getElementById('kpi-month-revenue').textContent = formatMoney(s.mes.receita);
             document.getElementById('kpi-month-orders').textContent = s.mes.pedidos;
             document.getElementById('kpi-ticket').textContent = formatMoney(s.ticket_medio);
-            document.getElementById('kpi-products').textContent = s.available_products;
+            document.getElementById('kpi-pratos').textContent = s.available_pratos;
 
             // Chart
             const maxRev = Math.max(...s.receita_diaria.map(d => d.receita), 1);
@@ -164,8 +164,8 @@
 
             // Top Products
             const topEl = document.getElementById('top-products');
-            if (s.produtos_mais_vendidos.length) {
-                topEl.innerHTML = s.produtos_mais_vendidos.map((p, i) => `
+            if (s.pratos_mais_vendidos.length) {
+                topEl.innerHTML = s.pratos_mais_vendidos.map((p, i) => `
                     <div class="flex items-center gap-3">
                         <span class="w-6 h-6 rounded-lg bg-red-50 flex items-center justify-center text-xs font-bold text-red-500">${i+1}</span>
                         <span class="text-sm text-gray-700 flex-1 truncate">${p.nome}</span>

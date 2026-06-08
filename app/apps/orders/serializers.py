@@ -6,7 +6,7 @@ from rest_framework import serializers
 
 class ItemPedidoSerializer(serializers.Serializer):
     """Valida itens individuais do pedido."""
-    produto_id = serializers.CharField()
+    prato_id = serializers.CharField()
     quantidade = serializers.IntegerField(min_value=1, max_value=99)
 
 

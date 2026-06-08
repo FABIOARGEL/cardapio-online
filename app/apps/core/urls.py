@@ -31,7 +31,7 @@ urlpatterns = [
 
     # Owner dashboard pages (require auth + owner role)
     path('dashboard/', views.dashboard_overview, name='dashboard'),
-    path('dashboard/produtos/', views.dashboard_products, name='dashboard_products'),
+    path('dashboard/pratos/', views.dashboard_pratos, name='dashboard_pratos'),
     path('dashboard/pedidos/', views.dashboard_orders, name='dashboard_orders'),
     path('dashboard/configuracoes/', views.dashboard_settings, name='dashboard_settings'),
     path('dashboard/cupons/', views.dashboard_coupons, name='dashboard_coupons'),

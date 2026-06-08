@@ -36,12 +36,12 @@ O Cardápio Online é uma solução *enterprise-grade* construída para eliminar
 
 ### Para Donos de Restaurantes (Tenants)
 - **Dashboard em Tempo Real:** Acompanhamento e transição de status de pedidos instantaneamente, impulsionado por WebSocket.
-- **Gestão de Catálogo:** Catálogo de produtos de alta performance com suporte a múltiplas imagens, categorias dinâmicas e controle de disponibilidade.
+- **Gestão de Catálogo:** Catálogo de pratos de alta performance com suporte a múltiplas imagens, categorias dinâmicas e controle de disponibilidade.
 - **Análises e Relatórios:** Acompanhamento de vendas, faturamento diário/semanal/mensal e ticket médio calculados via *Aggregation Pipelines* do MongoDB.
 - **Customização:** Configurações específicas por inquilino, incluindo taxas de entrega, tempo estimado e identidade visual.
 
 ### Para Clientes
-- **Busca Global:** Descoberta de produtos em todos os restaurantes cadastrados na plataforma.
+- **Busca Global:** Descoberta de pratos em todos os restaurantes cadastrados na plataforma.
 - **Carrinho Multi-Restaurante:** Carrinho intuitivo que suporta itens de diferentes locais.
 - **Acompanhamento ao Vivo:** Atualização do status do pedido em tempo real (Pendente, Preparando, Pronto) via WebSocket.
 - **Gestão de Endereços:** Múltiplos perfis de entrega com preenchimento automático via CEP.
@@ -160,7 +160,7 @@ cardapio-online/
 │   │   ├── authentication/    # Usuários, JWT, Endereços, OAuth
 │   │   ├── core/              # Interfaces, Utils, Exceptions, Middlewares
 │   │   ├── orders/            # Pedidos, Carrinho, Cupons, WebSockets
-│   │   ├── restaurants/       # Locatários (Tenants), Produtos, Aggregation Pipelines
+│   │   ├── restaurants/       # Locatários (Tenants), Pratos, Aggregation Pipelines
 │   │   └── reviews/           # Sistema de avaliações
 │   ├── static/                # Módulos JS, CSS, Assets
 │   ├── templates/             # Templates baseados em componentes Jinja2
@@ -179,7 +179,7 @@ Com o servidor rodando, acesse a documentação em:
 
 ### Módulos da API:
 - `/api/auth/` - Autenticação JWT e integração OAuth.
-- `/api/restaurants/` - Gestão de restaurantes (Tenants), catálogos de produtos e estatísticas.
+- `/api/restaurants/` - Gestão de restaurantes (Tenants), catálogos de pratos e estatísticas.
 - `/api/orders/` - Realização de pedidos, rastreamento em tempo real e validação de cupons.
 - `/api/reviews/` - Endpoint para feedback e avaliações.
 
@@ -198,7 +198,7 @@ O Cardápio Online foi desenvolvido com os padrões de segurança da indústria 
 ## Roadmap
 
 - **Fase 1:** Funcionalidades principais, painel em tempo real, integrações de pagamento.
-- **Fase 2:** Análises avançadas, upselling inteligente, recomendações de produtos baseadas em IA.
+- **Fase 2:** Análises avançadas, upselling inteligente, recomendações de pratos baseadas em IA.
 - **Fase 3:** Aplicativos móveis nativos (React Native) para clientes finais e rastreamento de entregadores.
 
 ---

@@ -33,7 +33,7 @@ sequenceDiagram
     API->>Core: list_products_by_tenant(id)
     Core->>DB: find({ "slug": id })
     DB-->>Core: Documento de Restaurante (Embedding)
-    Core-->>API: Coleção Serializada de Produtos
+    Core-->>API: Coleção Serializada de Pratos
     API-->>UI: HTTP 200 (Payload JSON)
     C->>UI: Ação: "Adicionar ao Carrinho"
     UI->>UI: Persiste Cesta em localStorage
@@ -45,7 +45,7 @@ sequenceDiagram
     API->>Core: create_order(payload, customer_id)
     
     %% Validação de Integridade
-    Core->>Core: Validate Constraints (Tenant Ativo, Produtos Disponíveis)
+    Core->>Core: Validate Constraints (Tenant Ativo, Pratos Disponíveis)
     Core->>Core: Executa Snapshot Financeiro das Matrizes BSON
     
     Core->>DB: insertOne(Order Document)

@@ -31,7 +31,7 @@ O sistema baseia-se em um modelo estrutural do tipo "Monolito Modular". Embora c
 | **Infraestrutura Real-time** | Django Channels | 4.x | Integração nativa de WebSocket compatível com as sessões ativas do protocolo HTTP tradicional do framework. |
 | **Persistence (Database)** | MongoDB Atlas | 7.x | Capacidade de absorção elástica de tráfego (Schema-less), clusterização nativa e performance de leitura via *Embedding*. |
 | **Object Data Mapper** | MongoEngine / Djongo | — | Motor de mapeamento abstraindo os comandos nativos de coleção do Mongo em instâncias de classes limpas. |
-| **Object Storage Cloud** | Amazon S3 | — | Persistência distribuída imutável de ativos estáticos de alta volumetria (imagens de lojas e produtos). |
+| **Object Storage Cloud** | Amazon S3 | — | Persistência distribuída imutável de ativos estáticos de alta volumetria (imagens de lojas e pratos). |
 | **Interface Visual (UI)** | Tailwind CSS | 3.x | Implementação de folha de estilos *Utility-First*, reduzindo inflação visual e gerando consistência de componentização. |
 | **Engine Criptográfica** | PyJWT | 2.x | Resolução de sessões através de payload assinado digitalmente, reduzindo carga (Stateless) em bancos de dados relacionais de sessão. |
 
@@ -79,7 +79,7 @@ cardapio-online/
 │   │   ├── permissions.py          # RBAC (Role-Based Access Control)
 │   │   └── exceptions.py           # Hierarquia global de falhas transacionais
 │   ├── orders/                     # Lógica transacional e WebSocket (consumers.py)
-│   └── restaurants/                # Tenancy model, produtos e menus
+│   └── restaurants/                # Tenancy model, pratos e menus
 ├── static/                         # Assets processados de client-side (CSS, Vanilla JS)
 ├── templates/                      # Views processadas via Server Side Rendering (SSR)
 ├── docs/                           # Documentação central do ecossistema

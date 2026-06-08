@@ -94,7 +94,7 @@
 <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
     <!-- Results Counter -->
     <div id="results-counter" class="hidden mb-6 text-sm text-gray-500 fade-in">
-        <span id="results-count"></span> produto(s) encontrado(s)
+        <span id="results-count"></span> prato(s) encontrado(s)
     </div>
 
     <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -115,7 +115,7 @@
             <div class="w-20 h-20 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-6">
                 <i data-lucide="search-x" class="w-10 h-10 text-red-300"></i>
             </div>
-            <h3 class="text-xl font-semibold text-gray-800 mb-3">Nenhum produto encontrado</h3>
+            <h3 class="text-xl font-semibold text-gray-800 mb-3">Nenhum prato encontrado</h3>
             <p class="text-gray-500 text-sm mb-6">Tente buscar com outros termos ou limpe os filtros.</p>
             <button onclick="clearFilters()" class="btn-primary px-6 py-3 rounded-xl text-sm text-white font-semibold">
                 <i data-lucide="refresh-cw" class="w-4 h-4 inline mr-2"></i>Limpar Filtros
@@ -200,7 +200,7 @@
         const pagination = document.getElementById('pagination');
         const counter = document.getElementById('results-counter');
 
-        let url = `/api/restaurants/all-products/?page=${currentPage}`;
+        let url = `/api/restaurants/all-pratos/?page=${currentPage}`;
         if (currentSearch) url += `&search=${encodeURIComponent(currentSearch)}`;
         if (currentCategory) url += `&category=${currentCategory}`;
 
@@ -239,7 +239,7 @@
                     <div class="bg-white rounded-2xl p-8 max-w-sm mx-auto border border-gray-100 shadow-card">
                         <i data-lucide="wifi-off" class="w-10 h-10 text-red-300 mx-auto mb-3"></i>
                         <p class="text-red-500 font-medium mb-2">Erro ao carregar</p>
-                        <p class="text-gray-500 text-sm mb-4">Não foi possível carregar os produtos.</p>
+                        <p class="text-gray-500 text-sm mb-4">Não foi possível carregar os pratos.</p>
                         <button onclick="loadProducts()" class="btn-primary px-5 py-2 rounded-xl text-sm text-white font-medium">Tentar Novamente</button>
                     </div>
                 </div>`;

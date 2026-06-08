@@ -48,7 +48,7 @@ class ServicoPedido:
         Cria um novo pedido com snapshots de preço.
 
         1. Valida que o restaurante existe e está ativo
-        2. Valida que todos os produtos existem e estão disponíveis
+        2. Valida que todos os pratos existem e estão disponíveis
         3. Faz snapshot dos preços atuais
         4. Valida cupom (usando ValidadorCupom — DRY)
         5. Cria pedido com status 'pendente'
@@ -58,31 +58,31 @@ class ServicoPedido:
         if not restaurante:
             raise ResourceNotFoundError('Restaurante')
 
-        # Construir lookup de produtos embutidos
-        mapa_produtos = {str(p._id): p for p in restaurante.produtos}
+        # Construir lookup de pratos embutidos
+        mapa_pratos = {str(p._id): p for p in restaurante.pratos}
 
         # Validar e snapshot dos itens
         itens_pedido: list[ItemPedido] = []
         subtotal = Decimal('0.00')
 
         for item_dados in dados['itens']:
-            produto = mapa_produtos.get(item_dados['produto_id'])
-            if not produto:
-                raise ValueError(f"Produto '{item_dados['produto_id']}' não encontrado.")
-            if not produto.esta_disponivel:
-                raise ValueError(f"Produto '{produto.nome}' não está disponível.")
+            prato = mapa_pratos.get(item_dados['prato_id'])
+            if not prato:
+                raise ValueError(f"Prato '{item_dados['prato_id']}' não encontrado.")
+            if not prato.esta_disponivel:
+                raise ValueError(f"Prato '{prato.nome}' não está disponível.")
 
             quantidade = item_dados['quantidade']
-            preco = Decimal(str(produto.preco))
+            preco = Decimal(str(prato.preco))
             subtotal_item = preco * quantidade
 
             itens_pedido.append(ItemPedido(
-                produto_id=ObjectId(item_dados['produto_id']),
-                nome=produto.nome,
+                prato_id=ObjectId(item_dados['prato_id']),
+                nome=prato.nome,
                 preco=preco,
                 quantidade=quantidade,
                 subtotal=subtotal_item,
-                imagem_url=produto.imagem_url,
+                imagem_url=prato.imagem_url,
             ))
             subtotal += subtotal_item
 

@@ -41,13 +41,13 @@ Este documento cataloga os requisitos técnicos, operacionais e de negócio que 
 | **Regras de Negócio** | A identidade visual (imagem de capa) é mandatória e deve ser hospedada em Object Storage (S3). Um restaurante é provisionado com status padrão de `inactive` até a sua aprovação final. |
 | **Criticidade** | Máxima |
 
-### RF04 — Gestão de Catálogo e Produtos
+### RF04 — Gestão de Catálogo e Pratos
 
 | Propriedade | Especificação |
 | --- | --- |
 | **Identificador** | RF04 |
-| **Descrição** | A plataforma deve permitir o Cadastro (CRUD) de produtos vinculados a um tenant específico, suportando metadados de vendas e imagens associadas. |
-| **Regras de Negócio** | Produtos devem ser categorizados rigidamente via enumerações (`appetizer`, `main`, `dessert`, `drink`, `combo`). O atributo de precificação não pode ser negativo ou zero. Imagens de produto têm restrições de MIME type (jpg/png/webp) e tamanho máximo de 5MB. |
+| **Descrição** | A plataforma deve permitir o Cadastro (CRUD) de pratos vinculados a um tenant específico, suportando metadados de vendas e imagens associadas. |
+| **Regras de Negócio** | Pratos devem ser categorizados rigidamente via enumerações (`appetizer`, `main`, `dessert`, `drink`, `combo`). O atributo de precificação não pode ser negativo ou zero. Imagens de prato têm restrições de MIME type (jpg/png/webp) e tamanho máximo de 5MB. |
 | **Criticidade** | Máxima |
 
 ### RF05 — Visualização e Descoberta de Cardápios
@@ -64,8 +64,8 @@ Este documento cataloga os requisitos técnicos, operacionais e de negócio que 
 | Propriedade | Especificação |
 | --- | --- |
 | **Identificador** | RF06 |
-| **Descrição** | Usuários com sessão ativa podem compor ordens de serviço mediante adição e alteração de produtos no carrinho de compras. |
-| **Regras de Negócio** | Persistência híbrida do estado (localStorage client-side com sincronização remota). Restrição estrita de contexto: um carrinho não pode conter produtos oriundos de tenants diferentes de forma simultânea. Quantidade limitante operacional por item: 99 unidades. |
+| **Descrição** | Usuários com sessão ativa podem compor ordens de serviço mediante adição e alteração de pratos no carrinho de compras. |
+| **Regras de Negócio** | Persistência híbrida do estado (localStorage client-side com sincronização remota). Restrição estrita de contexto: um carrinho não pode conter pratos oriundos de tenants diferentes de forma simultânea. Quantidade limitante operacional por item: 99 unidades. |
 | **Criticidade** | Máxima |
 
 ### RF07 — Orquestração de Checkout e Pedidos
@@ -114,7 +114,7 @@ Este documento cataloga os requisitos técnicos, operacionais e de negócio que 
 
 ### RNF05 — Experiência de Uso (UX) e Acessibilidade
 * **Mobile-First Indexing:** A estruturação da interface deve considerar resoluções mobile como primeira classe. Alvos interativos devem possuir área física mínima de clique de 44x44 pixels.
-* **Ciclo de Conversão:** O processo de checkout para o cliente final deve exigir um máximo de 3 minutos em fluxos felizes (Happy Path). O tempo de onboarding de um tenant, do cadastro à exibição de 5 produtos, não deve ultrapassar 10 minutos.
+* **Ciclo de Conversão:** O processo de checkout para o cliente final deve exigir um máximo de 3 minutos em fluxos felizes (Happy Path). O tempo de onboarding de um tenant, do cadastro à exibição de 5 pratos, não deve ultrapassar 10 minutos.
 
 ---
 

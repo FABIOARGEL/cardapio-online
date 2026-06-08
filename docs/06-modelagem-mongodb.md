@@ -19,8 +19,8 @@ Este documento especifica o design da base de dados não-relacional do Cardápio
 ## 6.1 Estratégia Estrutural
 
 A modelagem de dados foi arquitetada combinando os padrões estritos de bancos NoSQL voltados para escalabilidade horizontal:
-* **Embedded Document Pattern:** Produtos são embutidos diretamente nos restaurantes, visto que raramente são acessados de maneira isolada de seu tenant e o limite de array não excede a restrição de 16MB de um documento BSON.
-* **Extended Reference Pattern:** Pedidos referenciam os usuários, mas executam "snapshots" pontuais dos preços e nomes dos produtos. Isso impede a alteração retrospectiva de uma nota fiscal se um dono de restaurante alterar o preço de um hambúrguer no futuro.
+* **Embedded Document Pattern:** Pratos são embutidos diretamente nos restaurantes, visto que raramente são acessados de maneira isolada de seu tenant e o limite de array não excede a restrição de 16MB de um documento BSON.
+* **Extended Reference Pattern:** Pedidos referenciam os usuários, mas executam "snapshots" pontuais dos preços e nomes dos pratos. Isso impede a alteração retrospectiva de uma nota fiscal se um dono de restaurante alterar o preço de um hambúrguer no futuro.
 
 ---
 
@@ -68,7 +68,7 @@ db.usuarios.createIndex({ "papel": 1 })
 
 ## 6.3 Coleção de Tenants: `restaurantes`
 
-A coleção `restaurantes` é a estrutura de maior densidade no sistema. Ao englobar a grade de *horarios_funcionamento* e os *produtos*, ela permite a renderização completa de uma página de restaurante sem a necessidade de gerar sub-consultas (*JOIN/Lookup*).
+A coleção `restaurantes` é a estrutura de maior densidade no sistema. Ao englobar a grade de *horarios_funcionamento* e os *pratos*, ela permite a renderização completa de uma página de restaurante sem a necessidade de gerar sub-consultas (*JOIN/Lookup*).
 
 ```json
 {
@@ -105,7 +105,7 @@ A coleção `restaurantes` é a estrutura de maior densidade no sistema. Ao engl
     }
   ],
   "categorias": ["string"],
-  "produtos": [
+  "pratos": [
     {
       "_id": "ObjectId()",
       "nome": "string",
@@ -136,7 +136,7 @@ db.restaurantes.createIndex({ "dono_id": 1 })
 db.restaurantes.createIndex({ "status": 1 })
 db.restaurantes.createIndex({ "nome": "text", "descricao": "text" })
 db.restaurantes.createIndex({ "endereco.coordenadas": "2dsphere" })
-db.restaurantes.createIndex({ "produtos.categoria": 1 })
+db.restaurantes.createIndex({ "pratos.categoria": 1 })
 ```
 
 ---
@@ -153,7 +153,7 @@ Documentos de ordem de serviço são estruturas imutáveis que operam como regis
   "restaurante_id": "ObjectId() (Ref: restaurantes)",
   "itens": [
     {
-      "produto_id": "ObjectId()",
+      "prato_id": "ObjectId()",
       "nome": "string (Snapshot Congelado)",
       "preco": "number (Decimal128)",
       "quantidade": "integer",
@@ -238,10 +238,10 @@ erDiagram
         ObjectId dono_id FK
         string nome
         string slug
-        array produtos "Embedded Pattern"
+        array pratos "Embedded Pattern"
     }
 
-    produtos {
+    pratos {
         ObjectId _id PK
         string nome
         decimal preco
@@ -258,7 +258,7 @@ erDiagram
     }
 
     itens {
-        ObjectId produto_id FK
+        ObjectId prato_id FK
         string nome
         decimal preco
         int quantidade
@@ -276,7 +276,7 @@ erDiagram
     usuarios ||--o{ restaurantes : "Detém a Propriedade"
     usuarios ||--o{ pedidos : "Inicia uma Transação"
     usuarios ||--o{ avaliacoes : "Realiza"
-    restaurantes ||--o{ produtos : "Encapsula o Objeto"
+    restaurantes ||--o{ pratos : "Encapsula o Objeto"
     restaurantes ||--o{ pedidos : "Recepciona e Processa"
     restaurantes ||--o{ avaliacoes : "Recebe"
     pedidos ||--o{ itens : "Possui Fragmentos Financeiros"
@@ -310,7 +310,7 @@ db.createCollection("pedidos", {
           minItems: 1,
           items: {
             bsonType: "object",
-            required: ["produto_id", "nome", "preco", "quantidade", "subtotal"]
+            required: ["prato_id", "nome", "preco", "quantidade", "subtotal"]
           }
         }
       }

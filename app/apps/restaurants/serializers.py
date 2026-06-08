@@ -1,5 +1,5 @@
 """
-Serializadores de Restaurante, Produto e Cupom para o DRF.
+Serializadores de Restaurante, Prato e Cupom para o DRF.
 """
 from rest_framework import serializers
 
@@ -58,8 +58,8 @@ class UpdateRestaurantSerializer(serializers.Serializer):
     )
 
 
-class CreateProductSerializer(serializers.Serializer):
-    """Valida criação de produto."""
+class CreatePratoSerializer(serializers.Serializer):
+    """Valida criação de prato."""
     nome = serializers.CharField(max_length=100)
     descricao = serializers.CharField(max_length=500, required=False, allow_blank=True, default='')
     preco = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0.01)
@@ -71,8 +71,8 @@ class CreateProductSerializer(serializers.Serializer):
     estoque = serializers.IntegerField(default=-1, required=False)
 
 
-class UpdateProductSerializer(serializers.Serializer):
-    """Valida atualização de produto."""
+class UpdatePratoSerializer(serializers.Serializer):
+    """Valida atualização de prato."""
     nome = serializers.CharField(max_length=100, required=False)
     descricao = serializers.CharField(max_length=500, required=False, allow_blank=True)
     preco = serializers.DecimalField(

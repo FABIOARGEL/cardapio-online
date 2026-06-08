@@ -112,7 +112,7 @@ flowchart TD
 | --- | --- | --- |
 | **1.0 Auth & JWT** | Autenticação | Gerencia a criação do perfil, delegação para Google OAuth, *hashing* seguro (bcrypt) e emissão temporal do JWT. |
 | **2.0 Tenant Management** | Administrativo | Fornece os *endpoints* e *services* para a curadoria técnica dos restaurantes, incluindo *upload* do S3 de logos e banners. |
-| **3.0 Catalog Service** | Inventário | Mantém a sanidade de dados dos produtos (Embedding no *Mongo*), categorização e formatação financeira. |
+| **3.0 Catalog Service** | Inventário | Mantém a sanidade de dados dos pratos (Embedding no *Mongo*), categorização e formatação financeira. |
 | **4.0 Discovery Engine** | Consulta | Motor de *read-only* que varre a coleção otimizada de restaurantes com paginação e processa filtros de pesquisa. |
 | **5.0 Order Controller** | Checkout | Recebe o *Payload* de compra, executa snapshot das matrizes de custo financeiro e grava no Banco de Dados. |
 | **6.0 Fulfillment Service** | Operacional | Controla as transições da máquina de estado do pedido, publicando o histórico contábil e orquestrando o WebSocket. |
@@ -122,5 +122,5 @@ flowchart TD
 | Instância | Ref. MongoDB | Arquitetura |
 | --- | --- | --- |
 | **D1** | `users` | Coleção central de identidades com índices únicos para `email` e *sparse index* para `google_id`. |
-| **D2** | `restaurants` | Coleção densa focada em leituras, com produtos alocados via estratégia *Embedded Document Pattern*. |
-| **D3** | `orders` | Coleção transacional auditável. Possui registros fixos (sem relação em cascata para produtos após o processamento da compra). |
+| **D2** | `restaurants` | Coleção densa focada em leituras, com pratos alocados via estratégia *Embedded Document Pattern*. |
+| **D3** | `orders` | Coleção transacional auditável. Possui registros fixos (sem relação em cascata para pratos após o processamento da compra). |

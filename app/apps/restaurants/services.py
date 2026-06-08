@@ -1,5 +1,5 @@
 """
-Serviços de Restaurante, Produto, Estatísticas e Cupom — camada de lógica de negócio.
+Serviços de Restaurante, Prato, Estatísticas e Cupom — camada de lógica de negócio.
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from apps.restaurants.documents import (
     HorarioFuncionamento,
     Contato,
     Cupom,
-    Produto,
+    Prato,
     Restaurante,
     EnderecoRestaurante,
 )
@@ -108,7 +108,7 @@ class RestaurantService:
         return restaurante.to_dict()
 
     def get_restaurant(self, restaurant_id: str) -> dict | None:
-        """Busca um restaurante por ID com produtos disponíveis."""
+        """Busca um restaurante por ID com pratos disponíveis."""
         restaurante = self.repo.find_by_id(restaurant_id)
         if not restaurante:
             return None
@@ -217,10 +217,10 @@ class RestaurantService:
         # Limpa imagens
         if restaurante.imagem_capa_url:
             self.upload_service.delete(restaurante.imagem_capa_url)
-        for produto in restaurante.produtos:
-            if produto.imagem_url:
-                self.upload_service.delete(produto.imagem_url)
-            for img_url in (produto.imagens or []):
+        for prato in restaurante.pratos:
+            if prato.imagem_url:
+                self.upload_service.delete(prato.imagem_url)
+            for img_url in (prato.imagens or []):
                 self.upload_service.delete(img_url)
 
         self.repo.delete(restaurante)
@@ -228,8 +228,8 @@ class RestaurantService:
         return True
 
 
-class ProductService:
-    """Lógica de negócio para gerenciamento de produtos."""
+class PratoService:
+    """Lógica de negócio para gerenciamento de pratos."""
 
     def __init__(
         self,
@@ -249,15 +249,15 @@ class ProductService:
             raise OwnershipError()
         return restaurante
 
-    def _find_product(self, restaurante: Restaurante, product_id: str) -> Produto:
-        """Helper: encontra produto embarcado por ID."""
-        produto = next((p for p in restaurante.produtos if str(p._id) == product_id), None)
-        if not produto:
-            raise ResourceNotFoundError('Produto')
-        return produto
+    def _find_prato(self, restaurante: Restaurante, prato_id: str) -> Prato:
+        """Helper: encontra prato embarcado por ID."""
+        prato = next((p for p in restaurante.pratos if str(p._id) == prato_id), None)
+        if not prato:
+            raise ResourceNotFoundError('Prato')
+        return prato
 
-    def add_product(self, restaurant_id: str, owner_id: str, data: dict, images=None) -> dict:
-        """Adiciona um produto a um restaurante."""
+    def add_prato(self, restaurant_id: str, owner_id: str, data: dict, images=None) -> dict:
+        """Adiciona um prato a um restaurante."""
         restaurante = self._get_restaurant_for_owner(restaurant_id, owner_id)
 
         image_urls = []
@@ -267,7 +267,7 @@ class ProductService:
                 image_urls.append(self.upload_service.upload(optimized, folder='products'))
 
         main_image_url = image_urls[0] if image_urls else ''
-        produto = Produto(
+        prato = Prato(
             _id=ObjectId(),
             nome=sanitize_input(data['nome'].strip()),
             descricao=sanitize_input(data.get('descricao', '')),
@@ -279,20 +279,20 @@ class ProductService:
             ordem=data.get('ordem', 0),
             estoque=data.get('estoque', -1),
         )
-        restaurante.produtos.append(produto)
-        if produto.categoria not in restaurante.categorias:
-            restaurante.categorias.append(produto.categoria)
+        restaurante.pratos.append(prato)
+        if prato.categoria not in restaurante.categorias:
+            restaurante.categorias.append(prato.categoria)
         self.repo.save(restaurante)
 
-        logger.info("Produto '%s' adicionado ao restaurante %s", produto.nome, restaurant_id)
-        return produto.to_dict()
+        logger.info("Prato '%s' adicionado ao restaurante %s", prato.nome, restaurant_id)
+        return prato.to_dict()
 
-    def update_product(
-        self, restaurant_id: str, product_id: str, owner_id: str, data: dict, images=None,
+    def update_prato(
+        self, restaurant_id: str, prato_id: str, owner_id: str, data: dict, images=None,
     ) -> dict:
-        """Atualiza um produto dentro de um restaurante."""
+        """Atualiza um prato dentro de um restaurante."""
         restaurante = self._get_restaurant_for_owner(restaurant_id, owner_id)
-        produto = self._find_product(restaurante, product_id)
+        prato = self._find_prato(restaurante, prato_id)
 
         campos_permitidos = [
             'nome', 'descricao', 'preco', 'categoria', 
@@ -304,12 +304,12 @@ class ProductService:
                 val = data[field]
                 if field in ('nome', 'descricao') and isinstance(val, str):
                     val = sanitize_input(val)
-                setattr(produto, field, val)
+                setattr(prato, field, val)
 
         if images is not None and len(images) > 0:
-            if produto.imagem_url:
-                self.upload_service.delete(produto.imagem_url)
-            for img_url in (produto.imagens or []):
+            if prato.imagem_url:
+                self.upload_service.delete(prato.imagem_url)
+            for img_url in (prato.imagens or []):
                 try:
                     self.upload_service.delete(img_url)
                 except Exception:
@@ -319,58 +319,58 @@ class ProductService:
             for img in images:
                 optimized = self.image_processor.optimize(img)
                 new_urls.append(self.upload_service.upload(optimized, folder='products'))
-            produto.imagem_url = new_urls[0] if new_urls else ''
-            produto.imagens = new_urls
+            prato.imagem_url = new_urls[0] if new_urls else ''
+            prato.imagens = new_urls
 
-        produto.atualizado_em = datetime.now(timezone.utc)
+        prato.atualizado_em = datetime.now(timezone.utc)
         self.repo.save(restaurante)
-        return produto.to_dict()
+        return prato.to_dict()
 
-    def remove_product(self, restaurant_id: str, product_id: str, owner_id: str) -> bool:
-        """Remove um produto e suas imagens."""
+    def remove_prato(self, restaurant_id: str, prato_id: str, owner_id: str) -> bool:
+        """Remove um prato e suas imagens."""
         restaurante = self._get_restaurant_for_owner(restaurant_id, owner_id)
-        produto = self._find_product(restaurante, product_id)
+        prato = self._find_prato(restaurante, prato_id)
 
-        if produto.imagem_url:
-            self.upload_service.delete(produto.imagem_url)
-        for img_url in (produto.imagens or []):
+        if prato.imagem_url:
+            self.upload_service.delete(prato.imagem_url)
+        for img_url in (prato.imagens or []):
             try:
                 self.upload_service.delete(img_url)
             except Exception:
                 pass
 
-        restaurante.produtos.remove(produto)
-        restaurante.categorias = list({p.categoria for p in restaurante.produtos})
+        restaurante.pratos.remove(prato)
+        restaurante.categorias = list({p.categoria for p in restaurante.pratos})
         self.repo.save(restaurante)
 
-        logger.info("Produto %s removido do restaurante %s", product_id, restaurant_id)
+        logger.info("Prato %s removido do restaurante %s", prato_id, restaurant_id)
         return True
 
-    def list_products(
+    def list_pratos(
         self, restaurant_id: str, category: str | None = None, available_only: bool = True,
     ) -> list[dict]:
-        """Lista produtos para um restaurante específico."""
+        """Lista pratos para um restaurante específico."""
         restaurante = self.repo.find_by_id(restaurant_id)
         if not restaurante:
             raise ResourceNotFoundError('Restaurante')
 
-        produtos = restaurante.produtos
+        pratos = restaurante.pratos
         if available_only:
-            produtos = [p for p in produtos if p.esta_disponivel]
+            pratos = [p for p in pratos if p.esta_disponivel]
         if category:
-            produtos = [p for p in produtos if p.categoria == category]
-        produtos.sort(key=lambda p: (p.ordem, p.nome))
-        return [p.to_dict() for p in produtos]
+            pratos = [p for p in pratos if p.categoria == category]
+        pratos.sort(key=lambda p: (p.ordem, p.nome))
+        return [p.to_dict() for p in pratos]
 
-    def list_all_products(
+    def list_all_pratos(
         self,
         page: int = 1,
         page_size: int = 24,
         search: str | None = None,
         category: str | None = None,
     ) -> dict:
-        """Lista todos os produtos disponíveis via agregação."""
-        result = self.repo.listar_todos_produtos_agregacao(
+        """Lista todos os pratos disponíveis via agregação."""
+        result = self.repo.listar_todos_pratos_agregacao(
             page=page, page_size=page_size, search=search, category=category,
         )
         return result.to_dict()
@@ -401,8 +401,8 @@ class StatsService:
         restaurante = self._verify_ownership(restaurant_id, owner_id)
         stats = self.order_repo.obter_estatisticas_dashboard(restaurant_id)
 
-        stats['total_products'] = len(restaurante.produtos)
-        stats['available_products'] = sum(1 for p in restaurante.produtos if p.esta_disponivel)
+        stats['total_pratos'] = len(restaurante.pratos)
+        stats['available_pratos'] = sum(1 for p in restaurante.pratos if p.esta_disponivel)
 
         return stats
 

@@ -99,8 +99,8 @@ class RepositorioPedido(BaseRepository[Pedido]):
                 'contagem_status': [
                     {'$group': {'_id': '$status', 'contagem': {'$sum': 1}}},
                 ],
-                # Produtos mais vendidos
-                'produtos_mais_vendidos': [
+                # Pratos mais vendidos
+                'pratos_mais_vendidos': [
                     {'$match': {'status': {'$ne': 'cancelado'}}},
                     {'$unwind': '$itens'},
                     {'$group': {
@@ -186,7 +186,7 @@ class RepositorioPedido(BaseRepository[Pedido]):
             'mes': mes,
             'ticket_medio': round(mes['receita'] / mes['pedidos'], 2) if mes['pedidos'] else 0,
             'contagem_status': contagem_status,
-            'produtos_mais_vendidos': dados.get('produtos_mais_vendidos', []),
+            'pratos_mais_vendidos': dados.get('pratos_mais_vendidos', []),
             'receita_diaria': receita_diaria,
             'pedidos_recentes': pedidos_recentes,
             'total_pedidos_geral': total_geral,

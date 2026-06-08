@@ -85,9 +85,9 @@ def dashboard_overview(request):
     return render(request, 'restaurants/dashboard/overview.html')
 
 
-def dashboard_products(request):
-    """Product management page for restaurant owners."""
-    return render(request, 'restaurants/dashboard/products.html')
+def dashboard_pratos(request):
+    """Prato management page for restaurant owners."""
+    return render(request, 'restaurants/dashboard/pratos.html')
 
 
 def dashboard_orders(request):

@@ -7,8 +7,8 @@ import mongoengine as me
 
 
 class ItemPedido(me.EmbeddedDocument):
-    """Item do pedido — snapshot do produto no momento do pedido."""
-    produto_id = me.ObjectIdField(required=True)
+    """Item do pedido — snapshot do prato no momento do pedido."""
+    prato_id = me.ObjectIdField(required=True)
     nome = me.StringField(required=True)
     preco = me.DecimalField(required=True, precision=2)
     quantidade = me.IntField(required=True, min_value=1, max_value=99)
@@ -95,7 +95,7 @@ class Pedido(me.Document):
             'restaurante_id': str(self.restaurante_id),
             'itens': [
                 {
-                    'produto_id': str(item.produto_id),
+                    'prato_id': str(item.prato_id),
                     'nome': item.nome,
                     'preco': float(item.preco),
                     'quantidade': item.quantidade,

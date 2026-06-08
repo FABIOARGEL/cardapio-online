@@ -7,7 +7,7 @@ app_name = 'restaurants'
 urlpatterns = [
     # Public
     path('', views.RestaurantListView.as_view(), name='list'),
-    path('all-products/', views.AllProductsView.as_view(), name='all_products'),
+    path('all-pratos/', views.AllPratosView.as_view(), name='all_pratos'),
     path('slug/<str:slug>/', views.RestaurantSlugView.as_view(), name='slug'),
 
     # Owner
@@ -18,9 +18,9 @@ urlpatterns = [
     path('<str:restaurant_id>/', views.RestaurantDetailView.as_view(), name='detail'),
     path('<str:restaurant_id>/owner-detail/', views.OwnerRestaurantDetailView.as_view(), name='owner_detail'),
 
-    # Products
-    path('<str:restaurant_id>/products/', views.ProductListView.as_view(), name='product_list'),
-    path('<str:restaurant_id>/products/<str:product_id>/', views.ProductDetailView.as_view(), name='product_detail'),
+    # Pratos
+    path('<str:restaurant_id>/pratos/', views.PratoListView.as_view(), name='prato_list'),
+    path('<str:restaurant_id>/pratos/<str:prato_id>/', views.PratoDetailView.as_view(), name='prato_detail'),
 
     # Stats & History
     path('<str:restaurant_id>/stats/', views.StatsView.as_view(), name='stats'),
