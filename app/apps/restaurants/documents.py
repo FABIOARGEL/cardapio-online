@@ -10,7 +10,7 @@ Schema conforme doc 06-modelagem-mongodb.md:
          pedido_minimo, max_usos, contagem_usos, valido_de, valido_ate, esta_ativo
 """
 from datetime import datetime, timezone
-from bson import Decimal128
+from bson import Decimal128, ObjectId
 
 import mongoengine as me
 
@@ -58,7 +58,7 @@ class HorarioFuncionamento(me.EmbeddedDocument):
 
 class AvaliacaoCliente(me.EmbeddedDocument):
     """Avaliação individual de um cliente."""
-    _id = me.ObjectIdField(required=True, default=me.ObjectIdField().to_python)
+    _id = me.ObjectIdField(required=True, default=ObjectId)
     cliente_id = me.ObjectIdField(required=True)
     nome_cliente = me.StringField(required=True, max_length=100)
     pedido_id = me.ObjectIdField()
@@ -97,7 +97,7 @@ class Produto(me.EmbeddedDocument):
     """
     OPCOES_CATEGORIA = ('entrada', 'principal', 'sobremesa', 'bebida', 'combo')
 
-    _id = me.ObjectIdField(required=True, default=me.ObjectIdField().to_python)
+    _id = me.ObjectIdField(required=True, default=ObjectId)
     nome = me.StringField(required=True, max_length=100)
     descricao = me.StringField(max_length=500)
     preco = me.DecimalField(required=True, min_value=0.01, precision=2)
@@ -140,7 +140,7 @@ class Cupom(me.EmbeddedDocument):
     """
     OPCOES_TIPO_DESCONTO = ('porcentagem', 'fixo')
 
-    _id = me.ObjectIdField(required=True, default=me.ObjectIdField().to_python)
+    _id = me.ObjectIdField(required=True, default=ObjectId)
     codigo = me.StringField(required=True, max_length=30)
     descricao = me.StringField(max_length=200)
     tipo_desconto = me.StringField(required=True, choices=OPCOES_TIPO_DESCONTO)
