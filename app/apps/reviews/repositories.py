@@ -1,49 +1,61 @@
 """
-Repositório de Avaliações — acesso centralizado ao banco para documentos Avaliacao.
+Repositório de Avaliações — acesso centralizado às avaliações embarcadas.
 """
 from __future__ import annotations
 
 from bson import ObjectId
 
-from apps.core.base_repository import BaseRepository, PaginatedResult
-from apps.reviews.documents import Avaliacao
+from apps.restaurants.documents import Restaurante, AvaliacaoCliente
 
 
-class RepositorioAvaliacao(BaseRepository[Avaliacao]):
-    """Repositório para consultas no documento Avaliacao."""
+class RepositorioAvaliacao:
+    """Repositório para lidar com avaliações embarcadas no Restaurante."""
 
-    document_class = Avaliacao
-
-    def buscar_por_cliente_e_pedido(self, cliente_id: str, pedido_id: str) -> Avaliacao | None:
+    def buscar_por_cliente_e_pedido(self, cliente_id: str, pedido_id: str) -> AvaliacaoCliente | None:
         """Verifica se o cliente já avaliou um pedido específico."""
-        return self.find_one(
-            cliente_id=ObjectId(cliente_id),
-            pedido_id=ObjectId(pedido_id),
-        )
+        # Usa slice no elemMatch ou busca em memória
+        restaurante = Restaurante.objects(
+            avaliacao__itens__match={'cliente_id': ObjectId(cliente_id), 'pedido_id': ObjectId(pedido_id)}
+        ).first()
+        
+        if restaurante:
+            for item in restaurante.avaliacao.itens:
+                if str(item.cliente_id) == str(cliente_id) and str(item.pedido_id) == str(pedido_id):
+                    return item
+        return None
+
+    def buscar_por_id(self, restaurante_id: str, review_id: str) -> AvaliacaoCliente | None:
+        """Busca uma avaliação específica pelo seu ID e ID do restaurante."""
+        restaurante = Restaurante.objects(
+            id=ObjectId(restaurante_id), 
+            avaliacao__itens___id=ObjectId(review_id)
+        ).first()
+        if restaurante:
+            for item in restaurante.avaliacao.itens:
+                if str(item._id) == str(review_id):
+                    return item
+        return None
 
     def listar_por_restaurante(
         self, restaurante_id: str, page: int = 1, page_size: int = 10,
-    ) -> PaginatedResult:
+    ) -> dict:
         """Lista avaliações de um restaurante, mais recentes primeiro."""
-        return self.paginate(
-            page=page, page_size=page_size,
-            restaurante_id=ObjectId(restaurante_id),
-        )
-
-    def obter_avaliacao_restaurante(self, restaurante_id: str) -> dict:
-        """Calcula a nota média de um restaurante via agregação."""
-        pipeline = [
-            {'$match': {'restaurante_id': ObjectId(restaurante_id)}},
-            {'$group': {
-                '_id': None,
-                'media': {'$avg': '$nota'},
-                'contagem': {'$sum': 1},
-            }},
-        ]
-        result = self.aggregate(pipeline)
-        if result:
-            return {
-                'media': round(result[0]['media'], 1),
-                'contagem': result[0]['contagem'],
-            }
-        return {'media': 0.0, 'contagem': 0}
+        restaurante = Restaurante.objects(id=ObjectId(restaurante_id)).first()
+        if not restaurante:
+            return {'results': [], 'count': 0, 'page': page, 'total_pages': 0, 'page_size': page_size}
+        
+        # Ordenar por data decrescente (criado_em)
+        itens = sorted(restaurante.avaliacao.itens, key=lambda x: x.criado_em, reverse=True)
+        total = len(itens)
+        total_pages = max(1, (total + page_size - 1) // page_size)
+        start = (page - 1) * page_size
+        end = start + page_size
+        results = [item.to_dict() for item in itens[start:end]]
+        
+        return {
+            'results': results,
+            'count': total,
+            'page': page,
+            'total_pages': total_pages,
+            'page_size': page_size
+        }

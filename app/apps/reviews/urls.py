@@ -6,4 +6,5 @@ app_name = 'reviews'
 
 urlpatterns = [
     path('', views.ReviewListView.as_view(), name='list'),
+    path('<str:review_id>/', views.ReviewDetailView.as_view(), name='detail'),
 ]

@@ -56,10 +56,35 @@ class HorarioFuncionamento(me.EmbeddedDocument):
     meta = {'strict': False}
 
 
+class AvaliacaoCliente(me.EmbeddedDocument):
+    """Avaliação individual de um cliente."""
+    _id = me.ObjectIdField(required=True, default=me.ObjectIdField().to_python)
+    cliente_id = me.ObjectIdField(required=True)
+    nome_cliente = me.StringField(required=True, max_length=100)
+    pedido_id = me.ObjectIdField()
+    nota = me.IntField(required=True, min_value=1, max_value=5)
+    comentario = me.StringField(max_length=500)
+    criado_em = me.DateTimeField(default=lambda: datetime.now(timezone.utc))
+
+    meta = {'strict': False}
+
+    def to_dict(self) -> dict:
+        return {
+            'id': str(self._id),
+            'cliente_id': str(self.cliente_id),
+            'nome_cliente': self.nome_cliente,
+            'pedido_id': str(self.pedido_id) if self.pedido_id else None,
+            'nota': self.nota,
+            'comentario': self.comentario,
+            'criado_em': self.criado_em.isoformat() if self.criado_em else None,
+        }
+
+
 class Avaliacao(me.EmbeddedDocument):
-    """Informação agregada de avaliação."""
+    """Informação agregada de avaliação e lista de itens."""
     media = me.FloatField(default=0.0, min_value=0, max_value=5)
     contagem = me.IntField(default=0, min_value=0)
+    itens = me.EmbeddedDocumentListField(AvaliacaoCliente, default=list)
 
     meta = {'strict': False}
 
@@ -195,6 +220,17 @@ class Restaurante(me.Document):
     def save(self, *args, **kwargs):
         self.atualizado_em = datetime.now(timezone.utc)
         return super().save(*args, **kwargs)
+
+    def recalcular_avaliacao(self):
+        """Recalcula a média e contagem de avaliações a partir da lista de itens."""
+        if not self.avaliacao.itens:
+            self.avaliacao.media = 0.0
+            self.avaliacao.contagem = 0
+            return
+            
+        self.avaliacao.contagem = len(self.avaliacao.itens)
+        total_notas = sum(item.nota for item in self.avaliacao.itens)
+        self.avaliacao.media = round(total_notas / self.avaliacao.contagem, 1)
 
     def __str__(self):
         return self.nome

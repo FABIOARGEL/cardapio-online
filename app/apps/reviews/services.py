@@ -10,7 +10,7 @@ from bson import ObjectId
 from apps.core.exceptions import ResourceNotFoundError
 from apps.core.utils import sanitize_input
 from apps.restaurants.repositories import RepositorioRestaurante
-from apps.reviews.documents import Avaliacao
+from apps.restaurants.documents import AvaliacaoCliente
 from apps.reviews.repositories import RepositorioAvaliacao
 
 logger = logging.getLogger(__name__)
@@ -46,20 +46,16 @@ class ReviewService:
         if not restaurante:
             raise ResourceNotFoundError('Restaurante')
 
-        avaliacao = Avaliacao(
+        avaliacao = AvaliacaoCliente(
             cliente_id=ObjectId(customer_id),
             nome_cliente=sanitize_input(customer_name),
-            restaurante_id=ObjectId(restaurante_id),
             pedido_id=ObjectId(pedido_id) if pedido_id else None,
             nota=nota,
             comentario=sanitize_input(comentario) if comentario else '',
         )
-        self.repo.save(avaliacao)
-
-        # Atualiza a nota do restaurante usando agregação
-        rating_data = self.repo.obter_avaliacao_restaurante(restaurante_id)
-        restaurante.avaliacao.media = rating_data['media']
-        restaurante.avaliacao.contagem = rating_data['contagem']
+        
+        restaurante.avaliacao.itens.append(avaliacao)
+        restaurante.recalcular_avaliacao()
         self.restaurant_repo.save(restaurante)
 
         logger.info(
@@ -72,5 +68,69 @@ class ReviewService:
         self, restaurant_id: str, page: int = 1, page_size: int = 10,
     ) -> dict:
         """Lista avaliações de um restaurante com paginação."""
-        result = self.repo.listar_por_restaurante(restaurant_id, page=page, page_size=page_size)
-        return result.to_dict()
+        # result is directly a dict with pagination
+        return self.repo.listar_por_restaurante(restaurant_id, page=page, page_size=page_size)
+
+    def update_review(
+        self,
+        customer_id: str,
+        restaurante_id: str,
+        review_id: str,
+        nota: int | None = None,
+        comentario: str | None = None,
+    ) -> dict:
+        """Edita uma avaliação e atualiza a média."""
+        restaurante = self.restaurant_repo.find_by_id(restaurante_id)
+        if not restaurante:
+            raise ResourceNotFoundError('Restaurante')
+            
+        review_found = None
+        for item in restaurante.avaliacao.itens:
+            if str(item._id) == str(review_id):
+                if str(item.cliente_id) != str(customer_id):
+                    raise ValueError("Você não tem permissão para editar esta avaliação.")
+                review_found = item
+                break
+                
+        if not review_found:
+            raise ResourceNotFoundError('Avaliação')
+            
+        if nota is not None:
+            review_found.nota = nota
+        if comentario is not None:
+            review_found.comentario = sanitize_input(comentario)
+            
+        restaurante.recalcular_avaliacao()
+        self.restaurant_repo.save(restaurante)
+        
+        logger.info("Avaliação editada: review_id=%s, restaurante=%s", review_id, restaurante_id)
+        return review_found.to_dict()
+
+    def delete_review(
+        self,
+        customer_id: str,
+        restaurante_id: str,
+        review_id: str,
+    ) -> bool:
+        """Exclui uma avaliação e recalcula a média do restaurante."""
+        restaurante = self.restaurant_repo.find_by_id(restaurante_id)
+        if not restaurante:
+            raise ResourceNotFoundError('Restaurante')
+            
+        index_to_remove = -1
+        for i, item in enumerate(restaurante.avaliacao.itens):
+            if str(item._id) == str(review_id):
+                if str(item.cliente_id) != str(customer_id):
+                    raise ValueError("Você não tem permissão para excluir esta avaliação.")
+                index_to_remove = i
+                break
+                
+        if index_to_remove == -1:
+            raise ResourceNotFoundError('Avaliação')
+            
+        restaurante.avaliacao.itens.pop(index_to_remove)
+        restaurante.recalcular_avaliacao()
+        self.restaurant_repo.save(restaurante)
+        
+        logger.info("Avaliação excluída: review_id=%s, restaurante=%s", review_id, restaurante_id)
+        return True

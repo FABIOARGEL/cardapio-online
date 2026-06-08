@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from apps.core.authentication import JWTAuthentication
-from apps.reviews.serializers import CreateReviewSerializer
+from apps.reviews.serializers import CreateReviewSerializer, UpdateReviewSerializer
 from apps.reviews.services import ReviewService
 
 
@@ -41,9 +41,73 @@ class ReviewListView(APIView):
         serializer.is_valid(raise_exception=True)
 
         service = ReviewService()
-        result = service.create_review(
-            customer_id=str(user.id),
-            customer_name=user.nome,
-            **serializer.validated_data,
-        )
-        return Response(result, status=status.HTTP_201_CREATED)
+        try:
+            result = service.create_review(
+                customer_id=str(user.id),
+                customer_name=user.nome,
+                **serializer.validated_data,
+            )
+            return Response(result, status=status.HTTP_201_CREATED)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ReviewDetailView(APIView):
+    def put(self, request, review_id):
+        """Edita uma avaliação existente (cliente autenticado)."""
+        auth = JWTAuthentication()
+        user_auth = auth.authenticate(request)
+        if not user_auth:
+            return Response(
+                {'error': 'Autenticação necessária.'},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        user = user_auth[0]
+        
+        serializer = UpdateReviewSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        service = ReviewService()
+        try:
+            result = service.update_review(
+                customer_id=str(user.id),
+                review_id=review_id,
+                **serializer.validated_data
+            )
+            return Response(result, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_403_FORBIDDEN)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, review_id):
+        """Exclui uma avaliação existente (cliente autenticado)."""
+        auth = JWTAuthentication()
+        user_auth = auth.authenticate(request)
+        if not user_auth:
+            return Response(
+                {'error': 'Autenticação necessária.'},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        user = user_auth[0]
+        
+        # Precisamos do restaurante_id. Podemos passar via query_params ou no body
+        restaurante_id = request.query_params.get('restaurante_id') or request.data.get('restaurante_id')
+        if not restaurante_id:
+            return Response(
+                {'error': 'restaurante_id é obrigatório.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        service = ReviewService()
+        try:
+            service.delete_review(
+                customer_id=str(user.id),
+                restaurante_id=restaurante_id,
+                review_id=review_id
+            )
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_403_FORBIDDEN)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
